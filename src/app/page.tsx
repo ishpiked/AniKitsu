@@ -1,5 +1,6 @@
 import { getMonitoring } from "@/lib/kitsu/client";
 import { overallState, providerCounts } from "@/lib/kitsu/derive";
+import { siteUrl } from "@/lib/site";
 import LandingView, { type LandingStats } from "@/components/landing";
 
 export const metadata = {
@@ -34,5 +35,22 @@ export default async function Home() {
     stats = null;
   }
 
-  return <LandingView stats={stats} />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Kitsu",
+    url: siteUrl(),
+    description:
+      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <LandingView stats={stats} />
+    </>
+  );
 }

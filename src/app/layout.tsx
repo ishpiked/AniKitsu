@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,11 +18,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: {
     default: "Kitsu",
     template: "%s · Kitsu",
   },
-  description: "Kitsu: Telegram-native title discovery, streaming, and Watch Together.",
+  description:
+    "Kitsu: Telegram-native title discovery, streaming, and Watch Together.",
+  openGraph: {
+    type: "website",
+    siteName: "Kitsu",
+    title: "Kitsu · Find it. Resolve it. Watch it together.",
+    description:
+      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kitsu · Find it. Resolve it. Watch it together.",
+    description:
+      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { LogOut } from "@/lib/icons";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,12 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { OperatorNav } from "@/components/operator-nav";
 import { logoutAction, requireOperator } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Dev · Kitsu",
+  description: "Operator dashboard for the Kitsu Telegram streaming product.",
+  robots: { index: false, follow: false },
+};
 
 export default async function OperatorLayout({
   children,

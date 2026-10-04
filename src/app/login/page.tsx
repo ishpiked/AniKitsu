@@ -6,6 +6,7 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
 export const metadata = {
   title: "Dev sign in · Kitsu",
+  robots: { index: false, follow: false },
 };
 
 export default async function LoginPage() {
