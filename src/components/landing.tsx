@@ -991,6 +991,18 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
           </span>
           <nav aria-label="Footer" className="flex gap-4 md:ml-auto">
             <Link
+              href="/privacy"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/guidelines"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Guidelines
+            </Link>
+            <Link
               href="/status"
               className="underline-offset-4 hover:text-foreground hover:underline"
             >
