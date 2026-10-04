@@ -1,0 +1,304 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="640"
+  height="640"
+  viewBox="0 0 640 640"
+  fill="none"
+>
+  <defs>
+    <linearGradient
+      id="catGradient"
+      x1="215"
+      y1="175"
+      x2="425"
+      y2="450"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#ED1235"/>
+      <stop offset="0.48" stop-color="#F32245"/>
+      <stop offset="1" stop-color="#FF526C"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    /* -------------------------
+       EYE BLINK
+       ------------------------- */
+
+    .eye {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: blink 5s ease-in-out infinite;
+    }
+
+    .eye.right {
+      animation-delay: 0.03s;
+    }
+
+    @keyframes blink {
+      0%,
+      43%,
+      48%,
+      100% {
+        transform: scaleY(1);
+      }
+
+      45%,
+      46.5% {
+        transform: scaleY(0.06);
+      }
+    }
+
+
+    /* -------------------------
+       WHISKER MOVEMENT
+       ------------------------- */
+
+    .whisker {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: whiskerMove 3.2s ease-in-out infinite;
+    }
+
+    .whisker.left {
+      animation-delay: 0s;
+    }
+
+    .whisker.left.lower {
+      animation-delay: 0.18s;
+    }
+
+    .whisker.right {
+      animation-delay: 0.12s;
+    }
+
+    .whisker.right.lower {
+      animation-delay: 0.27s;
+    }
+
+    @keyframes whiskerMove {
+      0%,
+      100% {
+        transform: rotate(0deg);
+      }
+
+      25% {
+        transform: rotate(-2.5deg);
+      }
+
+      50% {
+        transform: rotate(1.5deg);
+      }
+
+      75% {
+        transform: rotate(-1deg);
+      }
+    }
+
+
+    /* -------------------------
+       SUBTLE HEAD FLOAT
+       ------------------------- */
+
+    .cat-head {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: headFloat 4s ease-in-out infinite;
+    }
+
+    @keyframes headFloat {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-2px);
+      }
+    }
+  </style>
+
+
+  <!-- =================================
+       CAT
+       ================================= -->
+
+  <g class="cat-head">
+
+    <!-- Main head -->
+    <path
+      fill="url(#catGradient)"
+      d="
+        M223.5 175.5
+
+        Q221 177 218.5 181.5
+        Q216 186 215 205.5
+        Q214 225 220 231.5
+        Q226 238 224.5 239.5
+        Q223 241 219 242.5
+        Q215 244 214 247
+        Q213 250 217.5 254.5
+        Q222 259 217 263.5
+        Q212 268 212 276
+        Q212 284 211 288.5
+        Q210 293 204 300.5
+        Q198 308 194 314.5
+        Q190 321 186 334
+        Q182 347 181.5 355
+        Q181 363 182 371
+        Q183 379 186 388
+        Q189 397 194.5 406
+        Q200 415 207.5 422.5
+        Q215 430 221 434
+        Q227 438 237 442
+        Q247 446 255.5 447.5
+        Q264 449 311.5 449
+        Q359 449 371.5 446
+        Q384 443 393.5 438
+        Q403 433 414 422
+        Q425 411 429 404
+        Q433 397 436 388
+        Q439 379 440 368
+        Q441 357 440 349.5
+        Q439 342 436.5 334.5
+        Q434 327 434 321.5
+        Q434 316 442.5 275
+        Q451 234 451 231.5
+        Q451 229 449.5 226
+        Q448 223 445 220.5
+        Q442 218 437.5 217.5
+        Q433 217 428.5 219.5
+        Q424 222 392.5 245.5
+        Q361 269 356.5 270.5
+        Q352 272 339.5 272
+        Q327 272 323.5 271
+        Q320 270 315.5 266
+        Q311 262 277 220.5
+        Q243 179 239.5 176.5
+        Q236 174 231 174
+        Q226 174 223.5 175.5
+        Z
+      "
+    />
+
+
+    <!-- ================================
+         LEFT EYE
+         ================================ -->
+
+    <g class="eye left">
+
+      <path
+        fill="#FFFFFF"
+        d="
+          M291 361
+          C291 394 278 415 251 415
+          C222 415 204 394 204 363
+          C204 331 224 309 252 309
+          C278 309 291 331 291 361
+          Z
+        "
+      />
+
+      <path
+        fill="url(#catGradient)"
+        d="
+          M282 367
+          C282 385 275 398 264 398
+          C253 398 245 385 245 367
+          C245 349 253 336 264 336
+          C275 336 282 349 282 367
+          Z
+        "
+      />
+
+    </g>
+
+
+    <!-- ================================
+         RIGHT EYE
+         ================================ -->
+
+    <g class="eye right">
+
+      <path
+        fill="#FFFFFF"
+        d="
+          M420 363
+          C420 395 403 415 375 415
+          C346 415 329 394 329 364
+          C329 331 348 309 375 309
+          C403 309 420 332 420 363
+          Z
+        "
+      />
+
+      <path
+        fill="url(#catGradient)"
+        d="
+          M379 369
+          C379 387 372 400 361 400
+          C350 400 343 387 343 369
+          C343 351 350 338 361 338
+          C372 338 379 351 379 369
+          Z
+        "
+      />
+
+    </g>
+
+  </g>
+
+
+  <!-- =================================
+       WHISKERS
+       ================================= -->
+
+  <g class="whisker left">
+
+    <path
+      d="M160 398 L174 394"
+      stroke="url(#catGradient)"
+      stroke-width="9"
+      stroke-linecap="round"
+    />
+
+  </g>
+
+
+  <g class="whisker left lower">
+
+    <path
+      d="M153 434 L179 420"
+      stroke="url(#catGradient)"
+      stroke-width="9"
+      stroke-linecap="round"
+    />
+
+  </g>
+
+
+  <g class="whisker right">
+
+    <path
+      d="M450 394 L463 398"
+      stroke="url(#catGradient)"
+      stroke-width="9"
+      stroke-linecap="round"
+    />
+
+  </g>
+
+
+  <g class="whisker right lower">
+
+    <path
+      d="M461 420 L486 434"
+      stroke="url(#catGradient)"
+      stroke-width="9"
+      stroke-linecap="round"
+    />
+
+  </g>
+
+</svg>
