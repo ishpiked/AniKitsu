@@ -279,7 +279,7 @@ export default function StatusView({
                 probe result.
               </CardDescription>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
+            <CardContent className="no-scrollbar overflow-x-auto">
               <table className="w-full min-w-160 text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">

@@ -4,6 +4,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Hide scrollbars everywhere while keeping scroll behavior intact. */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (max-width: 639px) {
   body.has-site-nav {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);

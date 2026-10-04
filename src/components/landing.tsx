@@ -726,7 +726,7 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
                           kitsu · {s.tab.toLowerCase()}
                         </span>
                       </div>
-                      <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed">
+                      <pre className="no-scrollbar overflow-x-auto p-4 font-mono text-xs leading-relaxed">
                         {s.code}
                       </pre>
                     </div>
@@ -995,6 +995,12 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
             Stream sources and metadata rely on upstream availability.
           </span>
           <nav aria-label="Footer" className="flex gap-4 md:ml-auto">
+            <Link
+              href="/faq"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              FAQ
+            </Link>
             <Link
               href="/privacy"
               className="underline-offset-4 hover:text-foreground hover:underline"

@@ -165,7 +165,7 @@ export default function BotPage() {
                   {entries.length} command{entries.length === 1 ? "" : "s"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
+              <CardContent className="no-scrollbar overflow-x-auto">
                 <table className="w-full min-w-160 text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">

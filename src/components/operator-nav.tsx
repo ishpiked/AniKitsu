@@ -26,7 +26,7 @@ export function OperatorNav() {
   return (
     <nav
       aria-label="Operator"
-      className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible"
+      className="no-scrollbar flex gap-1 overflow-x-auto md:flex-col md:overflow-visible"
     >
       {links.map((link) => {
         const active = link.exact
