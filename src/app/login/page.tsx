@@ -21,7 +21,7 @@ export default async function LoginPage() {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
       <span className="flex items-center gap-2">
-        <Logo />
+        <Logo className="size-10" />
         <span className="text-sm font-medium tracking-tight">Kitsu · dev</span>
       </span>
       <LoginForm />

@@ -18,7 +18,7 @@ export default async function OperatorLayout({
       <aside className="flex shrink-0 flex-col gap-4 border-b p-4 md:w-60 md:border-b-0 md:border-r md:p-6">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Logo className="size-8" />
+            <Logo className="size-10" />
             <div className="flex flex-col">
               <p className="text-sm font-semibold tracking-tight">Kitsu · dev</p>
             </div>

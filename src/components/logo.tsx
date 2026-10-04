@@ -11,9 +11,9 @@ export function Logo({ className }: { className?: string }) {
     <img
       src="/kitsu-logo.svg"
       alt="Kitsu logo"
-      width={28}
-      height={28}
-      className={cn("size-7 shrink-0", className)}
+      width={32}
+      height={32}
+      className={cn("size-8 shrink-0", className)}
     />
   );
 }

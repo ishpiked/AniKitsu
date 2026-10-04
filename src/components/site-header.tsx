@@ -42,7 +42,7 @@ export function SiteHeader() {
       <header className="absolute inset-x-0 top-0 z-50 flex justify-center px-4 pt-3">
         <div className="flex items-center gap-1 rounded-full border bg-background/80 py-1.5 pr-2 pl-3 shadow-sm backdrop-blur-xl">
           <Link href="/" className="mr-1 flex items-center gap-2">
-            <Logo className="size-6" />
+            <Logo className="size-8" />
             <span className="text-sm font-semibold tracking-tight">Kitsu</span>
           </Link>
           <nav aria-label="Site" className="hidden items-center gap-1 sm:flex">

@@ -875,7 +875,7 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
             <Spotlight>
               <div className="mx-auto flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 hover:shadow-lg">
                 <div className="flex items-center gap-3 border-b px-4 py-3">
-                  <Logo className="size-9 rounded-full" />
+                  <Logo className="size-10 rounded-full" />
                   <div>
                     <p className="text-sm font-medium">Kitsu</p>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -983,7 +983,7 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
       <footer className="border-t">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:px-8">
           <span className="flex items-center gap-2">
-            <Logo className="size-6" />
+            <Logo className="size-8" />
             <span className="font-medium text-foreground">Kitsu</span>
           </span>
           <span className="md:ml-4">
