@@ -11,7 +11,6 @@ import {
   Pause,
   Play,
   Search,
-  Trophy,
   Users,
   Zap,
 } from "@/lib/icons";
@@ -872,23 +871,27 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <Spotlight>
-              <div className="mx-auto flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 hover:shadow-lg">
-                <div className="flex items-center gap-3 border-b px-4 py-3">
-                  <Logo className="size-10 rounded-full" />
+              <div className="mx-auto flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
+                <div className="flex items-center gap-3 border-b bg-muted/40 px-4 py-3">
+                  <Logo className="size-10 rounded-xl border bg-card p-0.5" />
                   <div>
                     <p className="text-sm font-medium">Kitsu</p>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
-                      bot · online
+                      @AniKitsuBot · online
                     </p>
                   </div>
-                  <Trophy className="ml-auto size-4 text-muted-foreground" aria-hidden />
+                  <span className="ml-auto rounded-full border px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    bot
+                  </span>
                 </div>
-                <div className="flex flex-col gap-2.5 bg-muted/40 p-4 text-sm">
+                <div className="flex flex-col gap-1.5 bg-muted/40 p-4 text-sm">
                   <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 text-background">
                     /stream dune part two
                   </div>
+                  <p className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground">
+                    19:58
+                  </p>
                   <div className="max-w-[85%] rounded-2xl rounded-bl-md border bg-card px-3 py-2.5">
                     <p className="font-medium">Dune: Part Two (2024)</p>
                     <p className="text-xs text-muted-foreground">
@@ -906,12 +909,15 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
                   <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 text-background">
                     + Party · Friday 20:00
                   </div>
+                  <p className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground">
+                    19:59
+                  </p>
                   <div className="max-w-[85%] rounded-2xl rounded-bl-md border bg-card px-3 py-2">
                     Room created · invite sent to the group
                   </div>
                 </div>
-                <div className="flex items-center gap-2 border-t px-4 py-3">
-                  <div className="flex-1 rounded-full border bg-muted/60 px-3 py-1.5 font-mono text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 border-t bg-muted/40 px-4 py-3">
+                  <div className="flex-1 rounded-full border bg-card px-3 py-1.5 font-mono text-xs text-muted-foreground">
                     /pause
                   </div>
                   <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
@@ -919,7 +925,6 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
                   </span>
                 </div>
               </div>
-            </Spotlight>
           </Reveal>
         </div>
       </section>
