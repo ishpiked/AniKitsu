@@ -299,3 +299,35 @@ export interface PrometheusData {
   httpDurationSum: HttpDurationStat[];
   httpDurationCount: HttpDurationStat[];
 }
+
+export interface PersonalProfile {
+  user: {
+    user_id: number;
+    first_name: string | null;
+    username: string | null;
+    first_seen: string | null;
+    last_active: string | null;
+  };
+  watch_requests: {
+    movies: number;
+    series: number;
+    total: number;
+  };
+  watch_time_seconds: {
+    movies: number | null;
+    series: number | null;
+    total: number | null;
+  };
+  recent_watches: Array<{
+    title: string;
+    media_type: string;
+    season: number | null;
+    episode: number | null;
+    updated_at: string | null;
+    completed: boolean | null;
+  }>;
+  recent_activity: Array<{
+    event_type: string;
+    timestamp: string;
+  }>;
+}

@@ -42,8 +42,7 @@ export default async function OperatorLayout({
             </Button>
           </form>
           <p className="text-[11px] leading-snug text-muted-foreground">
-            Interim passphrase gate. Replace with an identity provider before
-            production use.
+            Owner access verified through your Telegram account.
           </p>
         </div>
       </aside>

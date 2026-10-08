@@ -1,12 +1,18 @@
-// Edge-safe operator session tokens (WebCrypto only, no Node APIs).
-// Token format: "<exp-unix-seconds>.<base64url-hmac>".
-// INTERIM AUTH: a single shared passphrase gate until a real identity
-// provider + /api/admin/v1 backend exists (spec §7). Do not treat this as
-// production-grade access control.
+// Edge-safe signed user sessions (WebCrypto only, no Node APIs).
+// Token format: "<user-id>.<exp-unix-seconds>.<base64url-hmac>".
 
-export const SESSION_COOKIE = "kitsu_ops";
+export const SESSION_COOKIE = "kitsu_user";
+
+export interface SessionClaims {
+  userId: number;
+  exp: number;
+}
 
 const encoder = new TextEncoder();
+
+export function isSessionSecretConfigured(secret: string): boolean {
+  return /^[a-f0-9]{64}$/i.test(secret);
+}
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
@@ -39,34 +45,59 @@ function toArrayBuffer(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-function sessionBody(exp: number): Uint8Array<ArrayBuffer> {
-  return toArrayBuffer(encoder.encode(`kitsu-ops:${exp}`));
+function sessionBody(userId: number, exp: number): Uint8Array<ArrayBuffer> {
+  return toArrayBuffer(encoder.encode(`kitsu-user:${userId}:${exp}`));
 }
 
-export async function signSession(exp: number, secret: string): Promise<string> {
+export async function signSession(
+  userId: number,
+  exp: number,
+  secret: string
+): Promise<string> {
+  if (!isSessionSecretConfigured(secret)) {
+    throw new Error("DASHBOARD_SESSION_SECRET must be 32 random bytes encoded as hex.");
+  }
   const key = await sessionKey(secret);
-  const signature = await crypto.subtle.sign("HMAC", key, sessionBody(exp));
-  return `${exp}.${base64UrlEncode(new Uint8Array(signature))}`;
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    sessionBody(userId, exp)
+  );
+  return `${userId}.${exp}.${base64UrlEncode(new Uint8Array(signature))}`;
 }
 
-/** Returns the token expiry (unix seconds) when valid, otherwise null. */
+/** Returns the authenticated Telegram user and expiry, or null if invalid. */
 export async function verifySession(
   token: string | undefined,
   secret: string
-): Promise<number | null> {
-  if (!token || !secret) return null;
-  const dot = token.indexOf(".");
-  if (dot <= 0) return null;
-  const exp = Number(token.slice(0, dot));
-  if (!Number.isInteger(exp) || exp <= 0) return null;
-  if (exp * 1000 < Date.now()) return null;
+): Promise<SessionClaims | null> {
+  if (!token || !isSessionSecretConfigured(secret)) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const userId = Number(parts[0]);
+  const exp = Number(parts[1]);
+  if (
+    !Number.isSafeInteger(userId) ||
+    userId <= 0 ||
+    !Number.isInteger(exp) ||
+    exp <= 0 ||
+    exp * 1000 < Date.now()
+  ) {
+    return null;
+  }
+
   let signature: Uint8Array<ArrayBuffer>;
   try {
-    signature = toArrayBuffer(base64UrlDecode(token.slice(dot + 1)));
+    signature = toArrayBuffer(base64UrlDecode(parts[2]));
   } catch {
     return null;
   }
   const key = await sessionKey(secret);
-  const valid = await crypto.subtle.verify("HMAC", key, signature, sessionBody(exp));
-  return valid ? exp : null;
+  const valid = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    signature,
+    sessionBody(userId, exp)
+  );
+  return valid ? { userId, exp } : null;
 }

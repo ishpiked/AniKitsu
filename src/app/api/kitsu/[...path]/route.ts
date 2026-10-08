@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { isOperatorRequest } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
+import { isOwnerUser } from "@/lib/owner";
+import type { PersonalProfile } from "@/lib/kitsu/types";
 import {
   BACKEND_TIMEOUT_MS,
   adminToken,
@@ -17,8 +19,8 @@ import {
 export const dynamic = "force-dynamic";
 
 // Narrow allowlist of read-only backend endpoints the dashboard may call.
-// The browser never talks to the backend directly and can only reach these
-// paths with a valid operator session.
+// The browser never talks to the backend directly; operator data is checked
+// against the verified owner identity below.
 const ALLOWED: Record<string, { upstream: string; type: "json" | "metrics" }> = {
   health: { upstream: "/health", type: "json" },
   "api/monitoring": { upstream: "/api/monitoring", type: "json" },
@@ -71,6 +73,229 @@ function adminError(
   status: number
 ): NextResponse {
   return NextResponse.json({ error, code }, { status });
+}
+
+function profileError(
+  error: string,
+  code: AdminErrorCode,
+  status: number
+): NextResponse {
+  return NextResponse.json(
+    { error, code },
+    { status, headers: { "Cache-Control": "private, no-store" } }
+  );
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function stringField(
+  source: Record<string, unknown>,
+  key: string
+): string | null {
+  return typeof source[key] === "string" ? source[key] : null;
+}
+
+function countField(
+  source: Record<string, unknown>,
+  key: string
+): number | null {
+  const value = source[key];
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function nullableNumberField(
+  source: Record<string, unknown>,
+  key: string
+): number | null {
+  const value = source[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function watchSecondsField(
+  source: Record<string, unknown>,
+  key: string
+): number | null {
+  if (!(key in source)) return 0;
+  const value = source[key];
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function profilePayload(
+  json: unknown,
+  userId: number
+): PersonalProfile | null {
+  const payload = record(json);
+  const user = record(payload?.user);
+  const requests = record(payload?.watch_requests);
+  if (
+    !payload ||
+    !user ||
+    !requests ||
+    user.user_id !== userId ||
+    !Array.isArray(payload.recent_watches) ||
+    !Array.isArray(payload.recent_activity)
+  ) {
+    return null;
+  }
+  const movies = countField(requests, "movies");
+  const series = countField(requests, "series");
+  const total = countField(requests, "total");
+  if (
+    movies === null ||
+    series === null ||
+    total === null ||
+    total !== movies + series
+  ) {
+    return null;
+  }
+  const movieSeconds = watchSecondsField(user, "watch_sec_movies");
+  const seriesSeconds = watchSecondsField(user, "watch_sec_series");
+
+  const recentWatches = payload.recent_watches
+    .slice(0, 20)
+    .flatMap((entry) => {
+      const watch = record(entry);
+      const title = watch ? stringField(watch, "title") : null;
+      const mediaType = watch ? stringField(watch, "media_type") : null;
+      if (!watch || !title || !mediaType) return [];
+      return [
+        {
+          title,
+          media_type: mediaType,
+          season: nullableNumberField(watch, "season"),
+          episode: nullableNumberField(watch, "episode"),
+          updated_at: stringField(watch, "updated_at"),
+          completed:
+            typeof watch.completed === "boolean" ? watch.completed : null,
+        },
+      ];
+    });
+
+  const recentActivity = payload.recent_activity
+    .slice(0, 20)
+    .flatMap((entry) => {
+      const activity = record(entry);
+      const eventType = activity ? stringField(activity, "event_type") : null;
+      const timestamp = activity ? stringField(activity, "timestamp") : null;
+      if (!eventType || !timestamp) return [];
+      return [{ event_type: eventType, timestamp }];
+    });
+
+  return {
+    user: {
+      user_id: userId,
+      first_name:
+        stringField(user, "first_name") ?? stringField(user, "name"),
+      username: stringField(user, "username"),
+      first_seen: stringField(user, "first_seen"),
+      last_active: stringField(user, "last_active"),
+    },
+    watch_requests: {
+      movies,
+      series,
+      total,
+    },
+    watch_time_seconds: {
+      movies: movieSeconds,
+      series: seriesSeconds,
+      total:
+        movieSeconds !== null && seriesSeconds !== null
+          ? movieSeconds + seriesSeconds
+          : null,
+    },
+    recent_watches: recentWatches,
+    recent_activity: recentActivity,
+  };
+}
+
+/** Resolve a profile from its signed-in user ID, never a browser-supplied ID. */
+async function proxyPersonalProfile(userId: number): Promise<NextResponse> {
+  const token = adminToken();
+  if (!token) {
+    return profileError(
+      "Profile data is not configured: set KITSU_OWNER_API_TOKEN server-side.",
+      "not-configured",
+      503
+    );
+  }
+
+  let baseUrl: string;
+  try {
+    baseUrl = backendBaseUrl();
+  } catch (error) {
+    return profileError(
+      error instanceof Error ? error.message : "KITSU_API_URL is not configured.",
+      "not-configured",
+      503
+    );
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `${baseUrl}/api/owner/users/${userId}?activity_limit=10&watch_limit=10`,
+      {
+        cache: "no-store",
+        signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch {
+    return profileError("Backend unreachable.", "unreachable", 502);
+  }
+
+  if (res.status === 404) {
+    return NextResponse.json(
+      { error: "No Kitsu profile was found for this account." },
+      {
+        status: 404,
+        headers: { "Cache-Control": "private, no-store" },
+      }
+    );
+  }
+  if (res.status === 401 || res.status === 403) {
+    return profileError(
+      "Backend refused the owner credential. Check KITSU_OWNER_API_TOKEN.",
+      "forbidden",
+      502
+    );
+  }
+  if (!res.ok) {
+    return profileError(`Backend responded ${res.status}.`, "upstream", 502);
+  }
+
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    return profileError(
+      "Backend returned invalid profile data.",
+      "upstream",
+      502
+    );
+  }
+  const profile = profilePayload(json, userId);
+  if (!profile) {
+    return profileError(
+      "Backend returned an unexpected profile.",
+      "upstream",
+      502
+    );
+  }
+  return NextResponse.json(profile, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 /**
@@ -137,14 +362,26 @@ export async function GET(
   request: Request,
   ctx: { params: Promise<{ path: string[] }> }
 ) {
-  if (!(await isOperatorRequest(request))) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
   const { path } = await ctx.params;
   const key = (path ?? []).join("/");
   const url = new URL(request.url);
   const params = url.searchParams;
+
+  if (key === "profile") {
+    const session = await getRequestSession(request);
+    if (session === null) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+    return proxyPersonalProfile(session.userId);
+  }
+
+  const session = await getRequestSession(request);
+  if (session === null) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!isOwnerUser(session.userId)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   // --- Admin namespace (bearer-protected, read-only) ---
   if (key === "api/admin/overview") {

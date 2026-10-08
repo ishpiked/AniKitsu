@@ -1,75 +1,59 @@
-"use server";
-
-import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE, signSession, verifySession } from "./session";
+import { isOwnerUser } from "./owner";
+import { SESSION_COOKIE, verifySession, type SessionClaims } from "./session";
 
-function sessionTtlSeconds(): number {
+export function sessionTtlSeconds(): number {
   const raw = Number(process.env.DASHBOARD_SESSION_TTL_SECONDS ?? "43200");
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 43200;
 }
 
-function passphraseMatches(input: string): boolean {
-  const expected = process.env.DASHBOARD_PASSPHRASE ?? "";
-  if (!expected || !input) return false;
-  const a = createHash("sha256").update(input, "utf8").digest();
-  const b = createHash("sha256").update(expected, "utf8").digest();
-  return timingSafeEqual(a, b);
+export async function getRequestSession(
+  request: Request
+): Promise<SessionClaims | null> {
+  const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
+  const cookie = request.headers
+    .get("cookie")
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
+    ?.slice(SESSION_COOKIE.length + 1);
+  return verifySession(cookie, secret);
 }
 
-export type LoginState = { error?: string } | undefined;
+export async function getCurrentSession() {
+  const store = await cookies();
+  return verifySession(
+    store.get(SESSION_COOKIE)?.value,
+    process.env.DASHBOARD_SESSION_SECRET ?? ""
+  );
+}
 
-export async function loginAction(
-  _prev: LoginState,
-  formData: FormData
-): Promise<LoginState> {
-  const passphrase = String(formData.get("passphrase") ?? "");
-  const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
+export async function logoutAction(): Promise<void> {
+  "use server";
+  const store = await cookies();
+  store.delete(SESSION_COOKIE);
+  redirect("/login");
+}
 
-  if (!process.env.DASHBOARD_PASSPHRASE || !secret) {
-    return { error: "Operator access is not configured (missing env)." };
-  }
-  if (!passphraseMatches(passphrase)) {
-    return { error: "Incorrect passphrase." };
-  }
+/** Authoritative owner check for server-rendered operator pages. */
+export async function requireOperator(): Promise<number> {
+  const session = await getCurrentSession();
+  if (session === null) redirect("/login?next=%2Fdev");
+  if (!isOwnerUser(session.userId)) redirect("/profile");
+  return session.userId;
+}
 
-  const exp = Math.floor(Date.now() / 1000) + sessionTtlSeconds();
-  const token = await signSession(exp, secret);
+export async function setSessionCookie(
+  token: string,
+  maxAge: number
+): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: sessionTtlSeconds(),
+    maxAge,
   });
-  redirect("/dev");
-}
-
-export async function logoutAction(): Promise<void> {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
-  redirect("/login");
-}
-
-/** Authoritative check for server code. Redirects to /login when invalid. */
-export async function requireOperator(): Promise<number> {
-  const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
-  const store = await cookies();
-  const exp = await verifySession(store.get(SESSION_COOKIE)?.value, secret);
-  if (exp === null) redirect("/login");
-  return exp;
-}
-
-/** Non-redirecting check for route handlers. */
-export async function isOperatorRequest(request: Request): Promise<boolean> {
-  const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
-  const header = request.headers.get("cookie") ?? "";
-  const token = header
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
-    ?.slice(SESSION_COOKIE.length + 1);
-  return (await verifySession(token, secret)) !== null;
 }

@@ -11,8 +11,9 @@ watch in the browser or inside Telegram, solo or in a synced room.
 | Landing | `/` | Public |
 | Service status | `/status` | Public, unauthenticated sanitized snapshot |
 | Bot guide | `/bot` | Public command reference |
-| Operator dashboard | `/dev` | Passphrase gate (interim auth) |
-| Sign in | `/login` | Operator passphrase |
+| Profile | `/profile` | Public page; private stats after Telegram sign-in |
+| Operator dashboard | `/dev` | Signed Telegram identity; bot owner only |
+| Sign in | `/login` | Telegram WebApp opened from Kitsu in Telegram |
 
 ## The Telegram bot
 
@@ -37,7 +38,10 @@ A full command-by-command reference lives in the in-app feature catalog
 
 ## Operator dashboard (`/dev`)
 
-Read-only Phase 1 coverage built on the backend monitoring API:
+Read-only coverage built on the backend monitoring and admin analytics APIs. Every
+`/dev` page and its BFF endpoints require a verified Telegram session whose
+user ID matches `KITSU_OWNER_USER_ID`. The Dev link is only rendered for that
+signed-in owner; all public site sections remain available to everyone.
 
 - **Overview**: overall Operational / Degraded / Down / Unknown verdict with
   reasons, plus API, bot, provider, traffic, audience, and history cards.
@@ -54,6 +58,14 @@ Charts show UTC timestamps, keep gaps for missing samples, and never render
 failures as zeros. Ranges from 1 hour to 90 days; history payloads are
 decimated server-side for transfer speed.
 
+## Profile (`/profile`)
+
+Sign in from inside the Kitsu Telegram WebApp to see personal watch-request
+counts, heartbeat-measured movie and series watch time, recent watch history,
+and recent activity. The server verifies the signed Telegram init data and
+uses the resulting account ID for the profile request; the browser cannot
+select another user's ID. Profile responses are private and uncached.
+
 ## Configuration
 
 All settings are server-side environment variables. Nothing secret is
@@ -62,13 +74,17 @@ exposed to the browser or the public status page.
 | Variable | Purpose |
 |---|---|
 | `KITSU_API_URL` | Base URL of the FastAPI backend (no trailing slash) |
-| `DASHBOARD_PASSPHRASE` | Operator passphrase for the `/dev` gate |
-| `DASHBOARD_SESSION_SECRET` | HMAC secret signing operator session cookies |
+| `KITSU_BOT_TOKEN` | Same bot token used to verify Telegram WebApp init data |
+| `KITSU_OWNER_USER_ID` | Telegram owner ID; must match backend `OWNER_USER_ID` |
+| `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
+| `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed sessions |
 | `DASHBOARD_SESSION_TTL_SECONDS` | Session lifetime, optional (default 12h) |
 
-Copy `.env.example` to your hosting provider's environment settings. Never
-commit real values. The passphrase gate is interim protection until a real
-identity provider and backend admin API exist.
+Copy `.env.example` to your hosting provider's environment settings. Set the
+bot token, owner ID, API token, and a random session secret in the webapp
+deployment. The bot token and owner API token stay server-side; never commit
+real values. Users must open the app from Telegram so the server can validate
+Telegram's signed init data.
 
 ## Develop
 
