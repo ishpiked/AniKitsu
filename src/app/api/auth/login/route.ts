@@ -22,9 +22,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const isObject = typeof body === "object" && body !== null;
-  const initData = isObject && "initData" in body ? body.initData : undefined;
-  const authData = isObject && "authData" in body ? body.authData : undefined;
+  const requestBody =
+    typeof body === "object" && body !== null && !Array.isArray(body)
+      ? body
+      : null;
+  const initData =
+    requestBody !== null && "initData" in requestBody
+      ? requestBody.initData
+      : undefined;
+  const authData =
+    requestBody !== null && "authData" in requestBody
+      ? requestBody.authData
+      : undefined;
   if ((initData === undefined) === (authData === undefined)) {
     return NextResponse.json(
       { error: "Provide exactly one Telegram sign-in credential." },
