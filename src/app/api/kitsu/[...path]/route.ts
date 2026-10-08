@@ -117,6 +117,25 @@ function nullableNumberField(
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function nullableBooleanField(
+  source: Record<string, unknown>,
+  key: string
+): boolean | null {
+  return typeof source[key] === "boolean" ? source[key] : null;
+}
+
+function safeHttpsUrl(value: string | null): string | null {
+  if (!value || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function watchSecondsField(
   source: Record<string, unknown>,
   key: string
@@ -130,7 +149,8 @@ function watchSecondsField(
 
 function profilePayload(
   json: unknown,
-  userId: number
+  userId: number,
+  photoUrl: string | undefined
 ): PersonalProfile | null {
   const payload = record(json);
   const user = record(payload?.user);
@@ -160,7 +180,7 @@ function profilePayload(
   const seriesSeconds = watchSecondsField(user, "watch_sec_series");
 
   const recentWatches = payload.recent_watches
-    .slice(0, 20)
+    .slice(0, 50)
     .flatMap((entry) => {
       const watch = record(entry);
       const title = watch ? stringField(watch, "title") : null;
@@ -175,12 +195,14 @@ function profilePayload(
           updated_at: stringField(watch, "updated_at"),
           completed:
             typeof watch.completed === "boolean" ? watch.completed : null,
+          position_seconds: nullableNumberField(watch, "position"),
+          duration_seconds: nullableNumberField(watch, "duration"),
         },
       ];
     });
 
   const recentActivity = payload.recent_activity
-    .slice(0, 20)
+    .slice(0, 50)
     .flatMap((entry) => {
       const activity = record(entry);
       const eventType = activity ? stringField(activity, "event_type") : null;
@@ -192,11 +214,16 @@ function profilePayload(
   return {
     user: {
       user_id: userId,
-      first_name:
-        stringField(user, "first_name") ?? stringField(user, "name"),
+      photo_url: safeHttpsUrl(photoUrl ?? null),
+      first_name: stringField(user, "first_name"),
+      last_name: stringField(user, "last_name"),
       username: stringField(user, "username"),
       first_seen: stringField(user, "first_seen"),
       last_active: stringField(user, "last_active"),
+      is_active: nullableBooleanField(user, "is_active"),
+      is_donor: nullableBooleanField(user, "is_donor"),
+      donated_stars: countField(user, "donated_stars"),
+      alerts_on: nullableBooleanField(user, "alerts_on"),
     },
     watch_requests: {
       movies,
@@ -217,7 +244,10 @@ function profilePayload(
 }
 
 /** Resolve a profile from its signed-in user ID, never a browser-supplied ID. */
-async function proxyPersonalProfile(userId: number): Promise<NextResponse> {
+async function proxyPersonalProfile(
+  userId: number,
+  photoUrl: string | undefined
+): Promise<NextResponse> {
   const token = adminToken();
   if (!token) {
     return profileError(
@@ -241,7 +271,7 @@ async function proxyPersonalProfile(userId: number): Promise<NextResponse> {
   let res: Response;
   try {
     res = await fetch(
-      `${baseUrl}/api/owner/users/${userId}?activity_limit=10&watch_limit=10`,
+      `${baseUrl}/api/owner/users/${userId}?activity_limit=100&watch_limit=100`,
       {
         cache: "no-store",
         signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
@@ -285,7 +315,7 @@ async function proxyPersonalProfile(userId: number): Promise<NextResponse> {
       502
     );
   }
-  const profile = profilePayload(json, userId);
+  const profile = profilePayload(json, userId, photoUrl);
   if (!profile) {
     return profileError(
       "Backend returned an unexpected profile.",
@@ -372,7 +402,7 @@ export async function GET(
     if (session === null) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
-    return proxyPersonalProfile(session.userId);
+    return proxyPersonalProfile(session.userId, session.photoUrl);
   }
 
   const session = await getRequestSession(request);

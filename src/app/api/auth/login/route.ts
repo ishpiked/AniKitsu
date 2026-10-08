@@ -63,7 +63,12 @@ export async function POST(request: Request) {
 
   const ttl = sessionTtlSeconds();
   const exp = Math.floor(Date.now() / 1000) + ttl;
-  const token = await signSession(identity.userId, exp, sessionSecret);
+  const token = await signSession(
+    identity.userId,
+    exp,
+    sessionSecret,
+    identity.photoUrl
+  );
   await setSessionCookie(token, ttl);
 
   return NextResponse.json(

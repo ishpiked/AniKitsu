@@ -11,6 +11,11 @@ import {
 } from "@/components/ui/card";
 import type { PersonalProfile } from "@/lib/kitsu/types";
 import { formatUtc } from "@/lib/kitsu/derive";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 
 function errorMessage(payload: unknown): string | null {
   if (typeof payload !== "object" || payload === null || !("error" in payload)) {
@@ -43,10 +48,16 @@ function isPersonalProfile(value: unknown): value is PersonalProfile {
     !isRecord(user) ||
     !Number.isSafeInteger(user.user_id) ||
     typeof user.user_id !== "number" ||
+    !isNullableString(user.photo_url) ||
     !isNullableString(user.first_name) ||
+    !isNullableString(user.last_name) ||
     !isNullableString(user.username) ||
     !isNullableString(user.first_seen) ||
     !isNullableString(user.last_active) ||
+    (user.is_active !== null && typeof user.is_active !== "boolean") ||
+    (user.is_donor !== null && typeof user.is_donor !== "boolean") ||
+    !isNullableSeconds(user.donated_stars) ||
+    (user.alerts_on !== null && typeof user.alerts_on !== "boolean") ||
     !isRecord(requests) ||
     !Number.isSafeInteger(requests.movies) ||
     typeof requests.movies !== "number" ||
@@ -72,7 +83,9 @@ function isPersonalProfile(value: unknown): value is PersonalProfile {
         (watch.season === null || typeof watch.season === "number") &&
         (watch.episode === null || typeof watch.episode === "number") &&
         isNullableString(watch.updated_at) &&
-        (watch.completed === null || typeof watch.completed === "boolean")
+        (watch.completed === null || typeof watch.completed === "boolean") &&
+        isNullableSeconds(watch.position_seconds) &&
+        isNullableSeconds(watch.duration_seconds)
     ) &&
     value.recent_activity.every(
       (activity) =>
@@ -165,26 +178,44 @@ export default function ProfileView() {
     );
   }
 
-  const displayName =
-    profile.user.first_name ??
+  const displayName = [
+    profile.user.first_name,
+    profile.user.last_name,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" ") ||
     (profile.user.username ? `@${profile.user.username}` : "Kitsu viewer");
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
 
   return (
     <div className="flex flex-col gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>{displayName}</CardTitle>
-          <CardDescription>
-            Telegram user ID {profile.user.user_id}
-            {profile.user.username ? ` · @${profile.user.username}` : ""}
-            {profile.user.first_seen
-              ? ` · Member since ${formatUtc(profile.user.first_seen)}`
-              : ""}
-            {profile.user.last_active
-              ? ` · Last active ${formatUtc(profile.user.last_active)}`
-              : ""}
-          </CardDescription>
-        </CardHeader>
+        <CardContent className="flex items-center gap-4 pt-6">
+          <Avatar size="lg" className="size-16">
+            {profile.user.photo_url ? (
+              <AvatarImage src={profile.user.photo_url} alt={`${displayName} profile photo`} />
+            ) : null}
+            <AvatarFallback>{initials || "K"}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <CardTitle>{displayName}</CardTitle>
+            <CardDescription>
+              Telegram user ID {profile.user.user_id}
+              {profile.user.username ? ` · @${profile.user.username}` : ""}
+              {profile.user.first_seen
+                ? ` · Member since ${formatUtc(profile.user.first_seen)}`
+                : ""}
+              {profile.user.last_active
+                ? ` · Last active ${formatUtc(profile.user.last_active)}`
+                : ""}
+            </CardDescription>
+          </div>
+        </CardContent>
       </Card>
 
       <section
@@ -203,6 +234,38 @@ export default function ProfileView() {
         <KpiCard
           label="Series requests"
           value={profile.watch_requests.series.toLocaleString()}
+        />
+      </section>
+
+      <section
+        aria-label="Kitsu account details"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <KpiCard
+          label="Account"
+          value={
+            profile.user.is_active === null
+              ? "Unknown"
+              : profile.user.is_active
+                ? "Active"
+                : "Inactive"
+          }
+        />
+        <KpiCard
+          label="Supporter"
+          value={profile.user.is_donor === null
+            ? "Unknown"
+            : profile.user.is_donor ? "Yes" : "No"}
+        />
+        <KpiCard
+          label="Stars donated"
+          value={profile.user.donated_stars?.toLocaleString() ?? "Unavailable"}
+        />
+        <KpiCard
+          label="Title alerts"
+          value={profile.user.alerts_on === null
+            ? "Not set"
+            : profile.user.alerts_on ? "On" : "Off"}
         />
       </section>
 
@@ -254,6 +317,9 @@ export default function ProfileView() {
                           ? `Season ${watch.season}, episode ${watch.episode}`
                           : watch.media_type}
                         {watch.completed ? " · Completed" : ""}
+                        {watch.duration_seconds && watch.duration_seconds > 0
+                          ? ` · ${Math.round(Math.min(100, ((watch.position_seconds ?? 0) / watch.duration_seconds) * 100))}% progress`
+                          : ""}
                       </p>
                     </div>
                     <time className="shrink-0 text-xs text-muted-foreground">

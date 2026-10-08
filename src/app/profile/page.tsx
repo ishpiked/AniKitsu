@@ -49,8 +49,8 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-col items-start gap-4">
             <p className="text-sm text-muted-foreground">
-              Sign in from inside the Kitsu app in Telegram. Your profile is
-              private and only shows data associated with your account.
+              Sign in with Telegram to see stats and activity associated only
+              with your account. Inside the Kitsu Mini App, sign-in is automatic.
             </p>
             <Button asChild>
               <Link href="/login?next=%2Fprofile">Continue with Telegram</Link>

@@ -5,6 +5,7 @@ const MAX_FUTURE_SKEW_SECONDS = 60;
 
 export interface TelegramWebAppIdentity {
   userId: number;
+  photoUrl?: string;
 }
 
 export interface TelegramLoginWidgetUser {
@@ -25,6 +26,18 @@ function isFreshAuthDate(authDate: number, now: number): boolean {
     nowSeconds - authDate <= MAX_INIT_DATA_AGE_SECONDS &&
     authDate - nowSeconds <= MAX_FUTURE_SKEW_SECONDS
   );
+}
+
+function telegramPhotoUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2048) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password
+      ? url.toString()
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Verify Telegram's signed WebApp init data before trusting its user field. */
@@ -83,7 +96,9 @@ export function verifyTelegramInitData(
     return null;
   }
 
-  return { userId };
+  const photoUrl =
+    "photo_url" in user ? telegramPhotoUrl(user.photo_url) : undefined;
+  return { userId, ...(photoUrl ? { photoUrl } : {}) };
 }
 
 /** Verify the signed user object returned by Telegram's browser Login Widget. */
@@ -151,5 +166,6 @@ export function verifyTelegramLoginWidgetUser(
     return null;
   }
 
-  return { userId: user.id };
+  const photoUrl = telegramPhotoUrl(user.photo_url);
+  return { userId: user.id, ...(photoUrl ? { photoUrl } : {}) };
 }

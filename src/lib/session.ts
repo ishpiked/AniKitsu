@@ -6,6 +6,7 @@ export const SESSION_COOKIE = "kitsu_user";
 export interface SessionClaims {
   userId: number;
   exp: number;
+  photoUrl?: string;
 }
 
 const encoder = new TextEncoder();
@@ -45,25 +46,55 @@ function toArrayBuffer(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-function sessionBody(userId: number, exp: number): Uint8Array<ArrayBuffer> {
-  return toArrayBuffer(encoder.encode(`kitsu-user:${userId}:${exp}`));
+function isSafePhotoUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      value.length <= 2048 &&
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+
+function sessionBody(
+  userId: number,
+  exp: number,
+  photoUrl?: string
+): Uint8Array<ArrayBuffer> {
+  const payload = photoUrl
+    ? `kitsu-user:${userId}:${exp}:${photoUrl}`
+    : `kitsu-user:${userId}:${exp}`;
+  return toArrayBuffer(encoder.encode(payload));
 }
 
 export async function signSession(
   userId: number,
   exp: number,
-  secret: string
+  secret: string,
+  photoUrl?: string
 ): Promise<string> {
   if (!isSessionSecretConfigured(secret)) {
     throw new Error("DASHBOARD_SESSION_SECRET must be 32 random bytes encoded as hex.");
+  }
+  if (photoUrl !== undefined && !isSafePhotoUrl(photoUrl)) {
+    throw new Error("Telegram profile photo URL must be a valid HTTPS URL.");
   }
   const key = await sessionKey(secret);
   const signature = await crypto.subtle.sign(
     "HMAC",
     key,
-    sessionBody(userId, exp)
+    sessionBody(userId, exp, photoUrl)
   );
-  return `${userId}.${exp}.${base64UrlEncode(new Uint8Array(signature))}`;
+  const encodedPhoto = photoUrl
+    ? base64UrlEncode(encoder.encode(photoUrl))
+    : null;
+  return encodedPhoto
+    ? `${userId}.${exp}.${encodedPhoto}.${base64UrlEncode(new Uint8Array(signature))}`
+    : `${userId}.${exp}.${base64UrlEncode(new Uint8Array(signature))}`;
 }
 
 /** Returns the authenticated Telegram user and expiry, or null if invalid. */
@@ -73,7 +104,7 @@ export async function verifySession(
 ): Promise<SessionClaims | null> {
   if (!token || !isSessionSecretConfigured(secret)) return null;
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3 && parts.length !== 4) return null;
   const userId = Number(parts[0]);
   const exp = Number(parts[1]);
   if (
@@ -87,8 +118,16 @@ export async function verifySession(
   }
 
   let signature: Uint8Array<ArrayBuffer>;
+  let photoUrl: string | undefined;
   try {
-    signature = toArrayBuffer(base64UrlDecode(parts[2]));
+    if (parts.length === 4) {
+      const decodedPhoto = new TextDecoder().decode(base64UrlDecode(parts[2]));
+      if (!isSafePhotoUrl(decodedPhoto)) return null;
+      photoUrl = decodedPhoto;
+    }
+    signature = toArrayBuffer(
+      base64UrlDecode(parts.length === 4 ? parts[3] : parts[2])
+    );
   } catch {
     return null;
   }
@@ -97,7 +136,7 @@ export async function verifySession(
     "HMAC",
     key,
     signature,
-    sessionBody(userId, exp)
+    sessionBody(userId, exp, photoUrl)
   );
-  return valid ? { userId, exp } : null;
+  return valid ? { userId, exp, ...(photoUrl ? { photoUrl } : {}) } : null;
 }

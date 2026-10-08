@@ -304,10 +304,16 @@ export interface PrometheusData {
 export interface PersonalProfile {
   user: {
     user_id: number;
+    photo_url: string | null;
     first_name: string | null;
+    last_name: string | null;
     username: string | null;
     first_seen: string | null;
     last_active: string | null;
+    is_active: boolean | null;
+    is_donor: boolean | null;
+    donated_stars: number | null;
+    alerts_on: boolean | null;
   };
   watch_requests: {
     movies: number;
@@ -326,6 +332,8 @@ export interface PersonalProfile {
     episode: number | null;
     updated_at: string | null;
     completed: boolean | null;
+    position_seconds: number | null;
+    duration_seconds: number | null;
   }>;
   recent_activity: Array<{
     event_type: string;
