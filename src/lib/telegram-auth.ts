@@ -1,10 +1,30 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 const MAX_INIT_DATA_AGE_SECONDS = 15 * 60;
 const MAX_FUTURE_SKEW_SECONDS = 60;
 
 export interface TelegramWebAppIdentity {
   userId: number;
+}
+
+export interface TelegramLoginWidgetUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number;
+  hash: string;
+}
+
+function isFreshAuthDate(authDate: number, now: number): boolean {
+  const nowSeconds = Math.floor(now / 1000);
+  return (
+    Number.isSafeInteger(authDate) &&
+    authDate > 0 &&
+    nowSeconds - authDate <= MAX_INIT_DATA_AGE_SECONDS &&
+    authDate - nowSeconds <= MAX_FUTURE_SKEW_SECONDS
+  );
 }
 
 /** Verify Telegram's signed WebApp init data before trusting its user field. */
@@ -49,15 +69,7 @@ export function verifyTelegramInitData(
   }
 
   const authDate = Number(params.get("auth_date"));
-  const nowSeconds = Math.floor(now / 1000);
-  if (
-    !Number.isSafeInteger(authDate) ||
-    authDate <= 0 ||
-    nowSeconds - authDate > MAX_INIT_DATA_AGE_SECONDS ||
-    authDate - nowSeconds > MAX_FUTURE_SKEW_SECONDS
-  ) {
-    return null;
-  }
+  if (!isFreshAuthDate(authDate, now)) return null;
 
   let user: unknown;
   try {
@@ -72,4 +84,72 @@ export function verifyTelegramInitData(
   }
 
   return { userId };
+}
+
+/** Verify the signed user object returned by Telegram's browser Login Widget. */
+export function verifyTelegramLoginWidgetUser(
+  value: unknown,
+  botToken: string,
+  now = Date.now()
+): TelegramWebAppIdentity | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    !botToken
+  ) {
+    return null;
+  }
+
+  const user = value as Record<string, unknown>;
+  const allowedFields = new Set([
+    "id",
+    "first_name",
+    "last_name",
+    "username",
+    "photo_url",
+    "auth_date",
+    "hash",
+  ]);
+  if (
+    Object.keys(user).some((key) => !allowedFields.has(key)) ||
+    typeof user.id !== "number" ||
+    !Number.isSafeInteger(user.id) ||
+    user.id <= 0 ||
+    typeof user.first_name !== "string" ||
+    typeof user.auth_date !== "number" ||
+    typeof user.hash !== "string" ||
+    !/^[a-f0-9]{64}$/i.test(user.hash) ||
+    !isFreshAuthDate(user.auth_date, now)
+  ) {
+    return null;
+  }
+
+  for (const key of ["last_name", "username", "photo_url"] as const) {
+    if (user[key] !== undefined && typeof user[key] !== "string") return null;
+  }
+
+  const dataCheckString = Object.entries(user)
+    .filter(([key]) => key !== "hash")
+    .sort(([left], [right]) =>
+      left < right ? -1 : left > right ? 1 : 0
+    )
+    .map(([key, fieldValue]) => `${key}=${fieldValue}`)
+    .join("\n");
+  const calculatedHash = createHmac(
+    "sha256",
+    createHash("sha256").update(botToken).digest()
+  )
+    .update(dataCheckString)
+    .digest();
+  const receivedHash = Buffer.from(user.hash, "hex");
+
+  if (
+    receivedHash.length !== calculatedHash.length ||
+    !timingSafeEqual(receivedHash, calculatedHash)
+  ) {
+    return null;
+  }
+
+  return { userId: user.id };
 }

@@ -13,7 +13,7 @@ watch in the browser or inside Telegram, solo or in a synced room.
 | Bot guide | `/bot` | Public command reference |
 | Profile | `/profile` | Public page; private stats after Telegram sign-in |
 | Operator dashboard | `/dev` | Signed Telegram identity; bot owner only |
-| Sign in | `/login` | Telegram WebApp opened from Kitsu in Telegram |
+| Sign in | `/login` | Telegram Login Widget or Telegram WebApp |
 
 ## The Telegram bot
 
@@ -60,11 +60,12 @@ decimated server-side for transfer speed.
 
 ## Profile (`/profile`)
 
-Sign in from inside the Kitsu Telegram WebApp to see personal watch-request
-counts, heartbeat-measured movie and series watch time, recent watch history,
-and recent activity. The server verifies the signed Telegram init data and
-uses the resulting account ID for the profile request; the browser cannot
-select another user's ID. Profile responses are private and uncached.
+Sign in with the Telegram Login Widget in a browser or through the Kitsu
+Telegram WebApp to see personal watch-request counts, heartbeat-measured movie
+and series watch time, recent watch history, and recent activity. The server
+verifies Telegram's signed identity and uses the resulting account ID for the
+profile request; the browser cannot select another user's ID. Profile
+responses are private and uncached.
 
 ## Configuration
 
@@ -74,7 +75,8 @@ exposed to the browser or the public status page.
 | Variable | Purpose |
 |---|---|
 | `KITSU_API_URL` | Base URL of the FastAPI backend (no trailing slash) |
-| `KITSU_BOT_TOKEN` | Same bot token used to verify Telegram WebApp init data |
+| `KITSU_BOT_TOKEN` | Same bot token used to verify Telegram WebApp and Login Widget data |
+| `KITSU_BOT_USERNAME` | Public bot username (without `@`) for browser sign-in |
 | `KITSU_OWNER_USER_ID` | Telegram owner ID; must match backend `OWNER_USER_ID` |
 | `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
 | `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed sessions |
@@ -82,9 +84,13 @@ exposed to the browser or the public status page.
 
 Copy `.env.example` to your hosting provider's environment settings. Set the
 bot token, owner ID, API token, and a random session secret in the webapp
-deployment. The bot token and owner API token stay server-side; never commit
-real values. Users must open the app from Telegram so the server can validate
-Telegram's signed init data.
+deployment. The bot username defaults to `AniKitsuBot` and can be overridden
+with `KITSU_BOT_USERNAME`. For the legacy Login Widget used here, link the
+website domain `kitsubot.vercel.app` to the bot with BotFather's `/setdomain`;
+the Mini App link `t.me/AniKitsuBot/status` is not the widget's allowed domain.
+The bot token and owner API token stay server-side; never commit real values.
+Users can also open the Mini App from Telegram to sign in with the WebApp's
+signed init data.
 
 ## Develop
 

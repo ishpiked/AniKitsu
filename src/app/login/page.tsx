@@ -37,7 +37,10 @@ export default async function LoginPage({
         <Logo className="size-10" />
         <span className="text-sm font-medium tracking-tight">Kitsu</span>
       </span>
-      <LoginForm nextPath={nextPath} />
+      <LoginForm
+        nextPath={nextPath}
+        botUsername={process.env.KITSU_BOT_USERNAME || "AniKitsuBot"}
+      />
     </main>
   );
 }
