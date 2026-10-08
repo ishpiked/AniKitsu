@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestSession } from "@/lib/auth";
 import { isOwnerUser } from "@/lib/owner";
+import { verifyTelegramInitData } from "@/lib/telegram-auth";
 import type { PersonalProfile } from "@/lib/kitsu/types";
 import {
   BACKEND_TIMEOUT_MS,
@@ -264,7 +265,7 @@ async function fetchOwnerEndpoint(
   });
 }
 
-/** Resolve a profile from its signed-in user ID, never a browser-supplied ID. */
+/** Resolve a profile from a verified Telegram Mini App identity. */
 async function proxyPersonalProfile(
   userId: number,
   photoUrl: string | undefined
@@ -865,7 +866,33 @@ export async function POST(
   ctx: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await ctx.params;
-  if ((path ?? []).join("/") !== "api/owner/blog/images") {
+  const key = (path ?? []).join("/");
+  if (key === "profile") {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return profileError("Telegram Mini App data is required.", "bad-request", 400);
+    }
+    const submitted = record(body);
+    const initData =
+      typeof submitted?.initData === "string" ? submitted.initData : "";
+    const identity = verifyTelegramInitData(
+      initData,
+      process.env.KITSU_BOT_TOKEN ?? "",
+      Date.now(),
+      12 * 60 * 60
+    );
+    if (!identity) {
+      return profileError(
+        "Open Kitsu from Telegram to load your personal profile.",
+        "forbidden",
+        401
+      );
+    }
+    return proxyPersonalProfile(identity.userId, identity.photoUrl);
+  }
+  if (key !== "api/owner/blog/images") {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   const session = await getRequestSession(request);

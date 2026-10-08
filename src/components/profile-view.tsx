@@ -122,7 +122,7 @@ function formatWatchTime(seconds: number | null): string {
     : `${days} ${dayLabel}`;
 }
 
-export default function ProfileView() {
+export default function ProfileView({ initData }: { initData: string }) {
   const [profile, setProfile] = React.useState<PersonalProfile | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -132,7 +132,12 @@ export default function ProfileView() {
     let active = true;
     setLoading(true);
     setError(null);
-    fetch("/api/kitsu/profile", { cache: "no-store" })
+    fetch("/api/kitsu/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ initData }),
+    })
       .then(async (response) => {
         let payload: unknown;
         try {
@@ -168,7 +173,7 @@ export default function ProfileView() {
     return () => {
       active = false;
     };
-  }, [refreshKey]);
+  }, [initData, refreshKey]);
 
   if (loading && profile === null) return <PanelLoading lines={5} />;
   if (error && profile === null) {

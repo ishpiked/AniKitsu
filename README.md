@@ -12,9 +12,9 @@ watch in the browser or inside Telegram, solo or in a synced room.
 | Service status | `/status` | Public, unauthenticated sanitized snapshot |
 | Blog | `/blog` | Public reading; owner-only writing |
 | Bot guide | `/bot` | Public command reference |
-| Profile | `/profile` | Public page; private stats after Telegram sign-in |
-| Operator dashboard | `/dev` | Signed Telegram identity; bot owner only |
-| Sign in | `/login` | Telegram Login Widget or Telegram WebApp |
+| Profile | `/profile` | Public page; private stats auto-fetch inside Telegram |
+| Operator dashboard | `/dev` | Telegram identity; bot owner only |
+| Account bootstrap | `/login` | Silent Telegram verification for owner-only Dev access |
 
 ## The Telegram bot
 
@@ -61,17 +61,16 @@ decimated server-side for transfer speed.
 
 ## Profile (`/profile`)
 
-Inside the Kitsu Telegram WebApp, the signed Telegram identity is used to sign
-in automatically before any profile data is requested. Reopening the Mini App
-re-verifies its current Telegram account before mounting the profile, so a
-leftover session from another Telegram account cannot display that account's
-stats. In a regular browser, use the Telegram Login Widget. The profile
-includes the verified Telegram photo when supplied, account and alert status,
-supporter/star totals, watch-request counts, saved movie and episode counts,
-90-day activity count, heartbeat-measured movie and series watch time, up to
-100 recent saved watches with resume progress, and up to 100 recent activity
-events. The backend queries are scoped to the verified Telegram user ID;
-profile responses are private and uncached.
+Inside the Kitsu Telegram WebApp, the profile sends Telegram's signed Mini App
+data directly to the server. The server verifies it and requests only that
+Telegram user's record; no sign-in screen, dashboard session, or browser-
+supplied user ID is used for personal stats. Outside Telegram, the page asks
+the visitor to open Kitsu in the Mini App. The profile includes the verified
+Telegram photo when supplied, account and alert status, supporter/star totals,
+watch-request counts, saved movie and episode counts, 90-day activity count,
+heartbeat-measured movie and series watch time, up to 100 recent saved watches
+with resume progress, and up to 100 recent activity events. Profile responses
+are private and uncached.
 
 ## Blog (`/blog`)
 
@@ -93,7 +92,7 @@ exposed to the browser or the public status page.
 |---|---|
 | `KITSU_API_URL` | Base URL of the FastAPI backend (no trailing slash) |
 | `KITSU_BOT_TOKEN` | Same bot token used to verify Telegram WebApp and Login Widget data |
-| `KITSU_BOT_USERNAME` | Public bot username (without `@`) for browser sign-in |
+| `KITSU_BOT_USERNAME` | Public bot username (without `@`) for Telegram links |
 | `KITSU_OWNER_USER_ID` | Telegram owner ID; must match backend `OWNER_USER_ID` |
 | `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
 | `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed sessions |
@@ -102,12 +101,11 @@ exposed to the browser or the public status page.
 Copy `.env.example` to your hosting provider's environment settings. Set the
 bot token, owner ID, API token, and a random session secret in the webapp
 deployment. The bot username defaults to `AniKitsuBot` and can be overridden
-with `KITSU_BOT_USERNAME`. For the legacy Login Widget used here, link the
-website domain `kitsubot.vercel.app` to the bot with BotFather's `/setdomain`;
-the Mini App link `t.me/AniKitsuBot/status` is not the widget's allowed domain.
-The bot token and owner API token stay server-side; never commit real values.
-Users can also open the Mini App from Telegram to sign in with the WebApp's
-signed init data.
+with `KITSU_BOT_USERNAME`. Personal profiles are available when Kitsu is opened
+inside Telegram; they use signed Mini App init data and do not require a
+dashboard session. The session secret remains necessary for the owner-only
+server-rendered Dev area. The bot token and owner API token stay server-side;
+never commit real values.
 
 ## Develop
 
