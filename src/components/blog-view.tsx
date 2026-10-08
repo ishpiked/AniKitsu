@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Script from "next/script";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ function formatDate(value: string): string {
 }
 
 export function BlogView({ isOwner }: { isOwner: boolean }) {
+  const router = useRouter();
   const [posts, setPosts] = React.useState<BlogPost[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -44,6 +47,60 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [canManage, setCanManage] = React.useState(false);
+  const [identityReady, setIdentityReady] = React.useState(false);
+  const [identityError, setIdentityError] = React.useState<string | null>(null);
+  const identityCheckInProgress = React.useRef(false);
+
+  const verifyCurrentIdentity = React.useCallback(async () => {
+    if (identityCheckInProgress.current) return;
+    identityCheckInProgress.current = true;
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.ready?.();
+      const initData = webApp?.initData ?? "";
+      if (!initData) {
+        setCanManage(isOwner);
+        return;
+      }
+
+      const loginResponse = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ initData }),
+      });
+      if (!loginResponse.ok) {
+        throw new Error(
+          "Could not verify this Telegram account. Reopen Kitsu in Telegram and try again."
+        );
+      }
+      const sessionResponse = await fetch("/api/auth/session", {
+        cache: "no-store",
+      });
+      if (!sessionResponse.ok) {
+        throw new Error("Could not refresh dashboard access.");
+      }
+      const session: unknown = await sessionResponse.json();
+      setCanManage(
+        typeof session === "object" &&
+          session !== null &&
+          "isOwner" in session &&
+          session.isOwner === true
+      );
+      router.refresh();
+    } catch (reason) {
+      setCanManage(false);
+      setIdentityError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not verify this Telegram account."
+      );
+    } finally {
+      setIdentityReady(true);
+      identityCheckInProgress.current = false;
+    }
+  }, [isOwner, router]);
 
   const loadPosts = React.useCallback(async () => {
     setLoading(true);
@@ -108,6 +165,7 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
         cache: "no-store",
         body: JSON.stringify({
           ...(editingId ? { postId: editingId } : {}),
+          initData: window.Telegram?.WebApp?.initData ?? "",
           title,
           body,
         }),
@@ -149,7 +207,10 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
-        body: JSON.stringify({ postId: post.id }),
+        body: JSON.stringify({
+          postId: post.id,
+          initData: window.Telegram?.WebApp?.initData ?? "",
+        }),
       });
       let payload: unknown = null;
       try {
@@ -173,7 +234,17 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {isOwner ? (
+      <Script
+        src="https://telegram.org/js/telegram-web-app.js"
+        strategy="afterInteractive"
+        onReady={() => void verifyCurrentIdentity()}
+        onError={() => {
+          setCanManage(false);
+          setIdentityError("Could not verify Telegram access. Reload and try again.");
+          setIdentityReady(true);
+        }}
+      />
+      {canManage ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -229,6 +300,12 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
             </form>
           </CardContent>
         </Card>
+      ) : null}
+
+      {isOwner && identityReady && identityError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {identityError}
+        </p>
       ) : null}
 
       {error ? (
