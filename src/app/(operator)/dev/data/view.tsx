@@ -72,8 +72,12 @@ export default function OwnerDataView() {
   const [detail, setDetail] = React.useState<unknown>(null);
   const [detailError, setDetailError] = React.useState<string | null>(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
+  const listController = React.useRef<AbortController | null>(null);
 
   const load = React.useCallback(async () => {
+    listController.current?.abort();
+    const controller = new AbortController();
+    listController.current = controller;
     setLoading(true);
     setError(null);
     setSelectedId(null);
@@ -81,6 +85,7 @@ export default function OwnerDataView() {
     try {
       const response = await fetch(requestPath(dataset, appliedQuery, offset), {
         cache: "no-store",
+        signal: controller.signal,
       });
       let result: unknown;
       try {
@@ -98,15 +103,23 @@ export default function OwnerDataView() {
       }
       setPayload(result);
     } catch (reason) {
+      if (reason instanceof Error && reason.name === "AbortError") return;
       setPayload(null);
       setError(reason instanceof Error ? reason.message : "Could not load backend data.");
     } finally {
-      setLoading(false);
+      if (listController.current === controller) {
+        listController.current = null;
+        setLoading(false);
+      }
     }
   }, [appliedQuery, dataset, offset]);
 
   React.useEffect(() => {
     void load();
+    return () => {
+      listController.current?.abort();
+      listController.current = null;
+    };
   }, [load]);
 
   React.useEffect(() => {
@@ -146,7 +159,9 @@ export default function OwnerDataView() {
           reason instanceof Error ? reason.message : "Could not load the record."
         );
       })
-      .finally(() => setDetailLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailLoading(false);
+      });
     return () => controller.abort();
   }, [dataset, selectedId]);
 
