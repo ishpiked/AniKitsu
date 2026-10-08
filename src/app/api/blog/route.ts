@@ -86,9 +86,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     has_more: offset + items.length < payload.total,
   };
   return NextResponse.json(feed, {
-    headers: {
-      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
-    },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
@@ -110,7 +108,10 @@ async function ownerSession(
       );
     }
     if (identity.userId !== session.userId) {
-      return apiError("The signed-in account does not match this Telegram account.", 403);
+      return apiError(
+        "The signed-in account does not match this Telegram account.",
+        403
+      );
     }
   }
   if (!isOwnerUser(session.userId)) {
@@ -135,12 +136,21 @@ function record(value: unknown): Record<string, unknown> | null {
 
 function parsePostInput(value: unknown) {
   const body = record(value);
-  if (!body || typeof body.title !== "string" || typeof body.body !== "string") {
+  if (
+    !body ||
+    typeof body.title !== "string" ||
+    typeof body.body !== "string"
+  ) {
     return null;
   }
   const title = body.title.trim();
   const content = body.body.trim();
-  if (title.length < 1 || title.length > 160 || content.length < 1 || content.length > 10000) {
+  if (
+    title.length < 1 ||
+    title.length > 160 ||
+    content.length < 1 ||
+    content.length > 10000
+  ) {
     return null;
   }
   return { title, body: content };
@@ -154,7 +164,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (denied) return denied;
   const input = parsePostInput(payload);
   if (!input) {
-    return apiError("A title and body are required (up to 160 and 10,000 characters).", 400);
+    return apiError(
+      "A title and body are required (up to 160 and 10,000 characters).",
+      400
+    );
   }
   return proxyOwnerWrite("/api/owner/blog/posts", "POST", input);
 }
@@ -217,7 +230,10 @@ async function proxyOwnerWrite(
   if (!response.ok) {
     if (response.status === 404) return apiError("Blog post not found.", 404);
     if (response.status === 401 || response.status === 403) {
-      return apiError("The backend refused the blog management credential.", 502);
+      return apiError(
+        "The backend refused the blog management credential.",
+        502
+      );
     }
     if (response.status === 422) {
       return apiError("The backend rejected the blog post content.", 400);
