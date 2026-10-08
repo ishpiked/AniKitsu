@@ -42,6 +42,8 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
   const router = useRouter();
   const [posts, setPosts] = React.useState<BlogPost[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  const [hasMore, setHasMore] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
@@ -102,11 +104,12 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
     }
   }, [isOwner, router]);
 
-  const loadPosts = React.useCallback(async () => {
-    setLoading(true);
+  const loadPosts = React.useCallback(async (offset = 0, append = false) => {
+    setLoading(!append);
+    setLoadingMore(append);
     setError(null);
     try {
-      const response = await fetch("/api/blog?limit=100", {
+      const response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
         cache: "no-store",
       });
       let payload: unknown;
@@ -122,7 +125,9 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
         typeof payload !== "object" ||
         payload === null ||
         !("items" in payload) ||
-        !Array.isArray(payload.items)
+        !Array.isArray(payload.items) ||
+        !("has_more" in payload) ||
+        typeof payload.has_more !== "boolean"
       ) {
         throw new Error("The blog feed returned an unexpected response.");
       }
@@ -134,13 +139,17 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
         }
         parsedPosts.push(post);
       }
-      setPosts(parsedPosts);
+      setPosts((current) =>
+        append ? [...current, ...parsedPosts] : parsedPosts
+      );
+      setHasMore(payload.has_more);
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Could not load blog posts."
       );
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
@@ -402,6 +411,17 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
           ))}
         </section>
       )}
+      {!loading && hasMore ? (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            disabled={loadingMore}
+            onClick={() => void loadPosts(posts.length, true)}
+          >
+            {loadingMore ? "Loading…" : "Load older posts"}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -34,11 +34,22 @@ export function parseBlogPost(value: unknown): BlogPost | null {
   ) {
     return null;
   }
-  const sourceUrl =
-    typeof post.source_url === "string" &&
-    post.source_url.startsWith("https://t.me/")
-      ? post.source_url
-      : null;
+  let sourceUrl: string | null = null;
+  if (typeof post.source_url === "string") {
+    try {
+      const url = new URL(post.source_url);
+      if (
+        url.protocol === "https:" &&
+        url.hostname === "t.me" &&
+        !url.username &&
+        !url.password
+      ) {
+        sourceUrl = url.toString();
+      }
+    } catch {
+      sourceUrl = null;
+    }
+  }
   return {
     id: post.id,
     source: post.source,
