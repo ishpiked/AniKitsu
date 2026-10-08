@@ -261,7 +261,8 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
             </CardTitle>
             <CardDescription>
               Publish a note directly to the Kitsu blog. Telegram channel
-              announcements are added automatically.
+              announcements are added automatically. Posts are plain text;
+              dashboard posts are not sent back to Telegram.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -311,7 +312,7 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
         </Card>
       ) : null}
 
-      {isOwner && identityReady && identityError ? (
+      {identityReady && identityError ? (
         <p role="alert" className="text-sm text-destructive">
           {identityError}
         </p>
@@ -387,7 +388,7 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
                       <ArrowRight className="size-4" aria-hidden />
                     </a>
                   ) : null}
-                  {isOwner && post.source === "owner" ? (
+                  {canManage && post.source === "owner" ? (
                     <div className="ml-auto flex gap-2">
                       <Button
                         size="sm"

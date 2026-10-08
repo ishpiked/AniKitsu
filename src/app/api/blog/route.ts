@@ -97,9 +97,12 @@ async function ownerSession(
   const session = await getRequestSession(request);
   if (session === null) return apiError("Sign in required.", 401);
   if (initData) {
+    // Keep account binding usable throughout the default 12-hour session.
     const identity = verifyTelegramInitData(
       initData,
-      process.env.KITSU_BOT_TOKEN ?? ""
+      process.env.KITSU_BOT_TOKEN ?? "",
+      Date.now(),
+      12 * 60 * 60
     );
     if (!identity) {
       return apiError(

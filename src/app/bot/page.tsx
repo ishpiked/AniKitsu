@@ -84,8 +84,8 @@ const guideSections = [
   {
     title: "4. Set your defaults and use your library",
     paragraphs: [
-      "Send /settings to choose your default server, video quality, and subtitle preference. These are your own defaults and only apply when the selected source supports them; you can still change available controls for an active player.",
-      "Send /track to see your recorded watch history and resume points. Open /continue to pick up where you left off, /recommend for suggestions based on your history, and /mystats for your personal watch statistics.",
+      "Send /settings and tap the controls on the screen to choose your default server, video quality, and subtitle preference. These are your own defaults and only apply when the selected source supports them; you can still change available controls for an active player.",
+      "Send /track to see your recorded watch history and resume points. Open /continue to pick up where you left off, /recommend for suggestions based on your history, and /mystats for your personal watch statistics. The dashboard Profile section also shows your own account and watch details after you open it in Telegram or sign in in a browser.",
       "Resume points and watch time are recorded from playback activity. They are useful estimates, not proof that a whole movie or episode was watched.",
     ],
   },
@@ -101,7 +101,7 @@ const guideSections = [
     title: "6. Alerts, help, and other buttons",
     paragraphs: [
       "Use /alerts to turn daily title alerts on or off. Alerts are opt-in; Kitsu does not enable them just because you opened the bot. /quiz starts a title quiz, /feedback sends a note to Kitsu support, /donate opens the optional Telegram Stars donation flow, and /ping checks the bot's connection to Telegram.",
-      "Use /share when you want a player link to share. Treat links like keys: who can open one depends on how it was created. For help at any time, use /help or return to this guide.",
+      "Use /share after Kitsu has prepared a player link. Treat links like keys: who can open one depends on how it was created. For help at any time, use /help or return to this guide.",
       "A title can be missing or fail to play when catalog metadata is incomplete, an episode has not aired, or an upstream provider is unavailable. Try another title spelling, check the release date, or try again later. If the problem continues, use /feedback and include what you tapped and what happened.",
     ],
   },

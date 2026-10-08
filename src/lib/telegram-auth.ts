@@ -18,12 +18,16 @@ export interface TelegramLoginWidgetUser {
   hash: string;
 }
 
-function isFreshAuthDate(authDate: number, now: number): boolean {
+function isFreshAuthDate(
+  authDate: number,
+  now: number,
+  maxAgeSeconds = MAX_INIT_DATA_AGE_SECONDS
+): boolean {
   const nowSeconds = Math.floor(now / 1000);
   return (
     Number.isSafeInteger(authDate) &&
     authDate > 0 &&
-    nowSeconds - authDate <= MAX_INIT_DATA_AGE_SECONDS &&
+    nowSeconds - authDate <= maxAgeSeconds &&
     authDate - nowSeconds <= MAX_FUTURE_SKEW_SECONDS
   );
 }
@@ -44,7 +48,8 @@ function telegramPhotoUrl(value: unknown): string | undefined {
 export function verifyTelegramInitData(
   initData: string,
   botToken: string,
-  now = Date.now()
+  now = Date.now(),
+  maxAgeSeconds = MAX_INIT_DATA_AGE_SECONDS
 ): TelegramWebAppIdentity | null {
   if (!initData || initData.length > 16_384 || !botToken) return null;
 
@@ -82,7 +87,7 @@ export function verifyTelegramInitData(
   }
 
   const authDate = Number(params.get("auth_date"));
-  if (!isFreshAuthDate(authDate, now)) return null;
+  if (!isFreshAuthDate(authDate, now, maxAgeSeconds)) return null;
 
   let user: unknown;
   try {
