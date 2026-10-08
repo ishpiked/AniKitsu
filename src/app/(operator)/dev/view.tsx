@@ -20,12 +20,14 @@ import {
   ChartShell,
   KpiCard,
   PanelError,
+  PanelLoading,
   TimeSeriesChart,
 } from "@/components/charts";
 import { AdminState } from "@/components/admin-state";
 import { StatusBadge } from "@/components/status";
 import {
   apiLatencySeries,
+  alignAnalyticsWindow,
   formatAgo,
   formatDuration,
   formatMs,
@@ -73,6 +75,189 @@ function generatedAtMs(iso: string | undefined): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+// ---------- join trends (record join dates, not analytics counters) ----------
+
+const JOIN_PAGE_LIMIT = 200;
+const JOIN_MAX_PAGES = 25;
+
+function recordBody(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function dayKey(time: number): string {
+  const d = new Date(time);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+async function fetchRecordPage(
+  kind: "users" | "groups",
+  offset: number,
+  signal: AbortSignal
+): Promise<{ items: Record<string, unknown>[]; total: number | null }> {
+  const params = new URLSearchParams({
+    limit: String(JOIN_PAGE_LIMIT),
+    offset: String(offset),
+  });
+  const response = await fetch(`/api/kitsu/api/owner/${kind}?${params}`, {
+    cache: "no-store",
+    signal,
+  });
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(`Backend returned an unreadable response (${response.status}).`);
+  }
+  if (response.status === 401) {
+    const err = new Error("Operator session expired. Sign in again.");
+    err.name = "SessionExpiredError";
+    throw err;
+  }
+  if (!response.ok) {
+    const body = recordBody(result);
+    throw new Error(
+      typeof body?.error === "string"
+        ? body.error
+        : `Backend responded ${response.status}.`
+    );
+  }
+  const body = recordBody(result);
+  const items = body && Array.isArray(body.items) ? body.items : [];
+  return {
+    items: items
+      .map(recordBody)
+      .filter((item): item is Record<string, unknown> => item !== null),
+    total: body && typeof body.total === "number" ? body.total : null,
+  };
+}
+
+interface JoinTrends {
+  from: string;
+  to: string;
+  users: { t: string; joins: number }[];
+  groups: { t: string; joins: number }[];
+}
+
+function bucketJoins(
+  items: Record<string, unknown>[],
+  dateKey: string,
+  fromMs: number,
+  toMs: number
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const raw = typeof item[dateKey] === "string" ? item[dateKey] : null;
+    if (!raw) continue;
+    const time = Date.parse(raw);
+    if (!Number.isFinite(time) || time < fromMs || time >= toMs) continue;
+    const key = dayKey(time);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Trailing-7-day join counts bucketed client-side from account records.
+ * Polls with the dashboard; paused with it.
+ */
+function useJoinTrends(paused: boolean) {
+  const [data, setData] = React.useState<JoinTrends | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [sessionExpired, setSessionExpired] = React.useState(false);
+  const [tick, setTick] = React.useState(0);
+  const refresh = React.useCallback(() => setTick((t) => t + 1), []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function run() {
+      try {
+        const window = alignAnalyticsWindow(168, "day");
+        const fromMs = Date.parse(window.from);
+        const toMs = Date.parse(window.to);
+        const [userPages, groupPages] = await Promise.all([
+          (async () => {
+            const first = await fetchRecordPage("users", 0, controller.signal);
+            const pages = Math.min(
+              JOIN_MAX_PAGES,
+              Math.ceil((first.total ?? first.items.length) / JOIN_PAGE_LIMIT)
+            );
+            if (pages <= 1) return first.items;
+            const rest = await Promise.all(
+              Array.from({ length: pages - 1 }, (_, i) =>
+                fetchRecordPage("users", (i + 1) * JOIN_PAGE_LIMIT, controller.signal)
+              )
+            );
+            return first.items.concat(rest.flatMap((page) => page.items));
+          })(),
+          (async () => {
+            const first = await fetchRecordPage("groups", 0, controller.signal);
+            const pages = Math.min(
+              JOIN_MAX_PAGES,
+              Math.ceil((first.total ?? first.items.length) / JOIN_PAGE_LIMIT)
+            );
+            if (pages <= 1) return first.items;
+            const rest = await Promise.all(
+              Array.from({ length: pages - 1 }, (_, i) =>
+                fetchRecordPage("groups", (i + 1) * JOIN_PAGE_LIMIT, controller.signal)
+              )
+            );
+            return first.items.concat(rest.flatMap((page) => page.items));
+          })(),
+        ]);
+        if (cancelled) return;
+        const userCounts = bucketJoins(userPages, "first_seen", fromMs, toMs);
+        const groupCounts = bucketJoins(groupPages, "added_at", fromMs, toMs);
+        const days: string[] = [];
+        for (
+          let cursor = Math.floor(fromMs / 86_400_000) * 86_400_000;
+          cursor < toMs;
+          cursor += 86_400_000
+        ) {
+          days.push(new Date(cursor).toISOString());
+        }
+        setData({
+          from: window.from,
+          to: window.to,
+          users: days.map((t) => ({ t, joins: userCounts.get(dayKey(Date.parse(t))) ?? 0 })),
+          groups: days.map((t) => ({ t, joins: groupCounts.get(dayKey(Date.parse(t))) ?? 0 })),
+        });
+        setError(null);
+        setSessionExpired(false);
+        setLoading(false);
+      } catch (reason) {
+        if (cancelled) return;
+        if (reason instanceof Error && reason.name === "AbortError") return;
+        if (reason instanceof Error && reason.name === "SessionExpiredError") {
+          setSessionExpired(true);
+        }
+        setError(
+          reason instanceof Error ? reason.message : "Could not load join trends."
+        );
+        setLoading(false);
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [tick]);
+
+  React.useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(refresh, 45000);
+    return () => window.clearInterval(id);
+  }, [paused, refresh]);
+
+  return { data, error, loading, sessionExpired, refresh };
+}
+
 export default function OverviewView({
   initialHours,
   initialMonitoring,
@@ -116,6 +301,8 @@ export default function OverviewView({
     initialAt: fetchedAt,
   });
 
+  const joins = useJoinTrends(paused);
+
   const prevRates = React.useRef<RateSample | null>(null);
   const [rates, setRates] = React.useState<{
     totals: ReturnType<typeof summarizeRequests>;
@@ -144,6 +331,7 @@ export default function OverviewView({
     metrics.refresh();
     health.refresh();
     admin.refresh();
+    joins.refresh();
   };
   const loading = monitoring.loading && monitoring.data === null;
   const live = monitoring.error === null && metrics.error === null;
@@ -180,7 +368,7 @@ export default function OverviewView({
         />
       </div>
 
-      {monitoring.sessionExpired || metrics.sessionExpired ? (
+      {monitoring.sessionExpired || metrics.sessionExpired || joins.sessionExpired ? (
         <div
           role="alert"
           className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm"
@@ -583,6 +771,67 @@ export default function OverviewView({
           />
         </ChartShell>
       ) : null}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <ChartShell
+          title="User joins"
+          description="New users per day (UTC), counted from account records."
+          meta={
+            joins.data
+              ? `Buckets: day (UTC) · window ${formatUtc(joins.data.from)} → ${formatUtc(joins.data.to)}`
+              : undefined
+          }
+        >
+          {joins.data ? (
+            <TimeSeriesChart
+              points={joins.data.users.map((d) => ({
+                t: d.t,
+                values: { joins: d.joins },
+              }))}
+              series={[{ key: "joins", label: "Users joined", color: "#0ea5e9" }]}
+              formatY={(v) => String(Math.round(v))}
+              tickMode="date"
+              brush
+            />
+          ) : joins.loading ? (
+            <PanelLoading lines={3} />
+          ) : (
+            <PanelError
+              message={joins.error ?? "Join trends are unavailable."}
+              onRetry={joins.refresh}
+            />
+          )}
+        </ChartShell>
+        <ChartShell
+          title="Group joins"
+          description="New groups per day (UTC), counted from group records."
+          meta={
+            joins.data
+              ? `Buckets: day (UTC) · window ${formatUtc(joins.data.from)} → ${formatUtc(joins.data.to)}`
+              : undefined
+          }
+        >
+          {joins.data ? (
+            <TimeSeriesChart
+              points={joins.data.groups.map((d) => ({
+                t: d.t,
+                values: { joins: d.joins },
+              }))}
+              series={[{ key: "joins", label: "Groups joined", color: "#8b5cf6" }]}
+              formatY={(v) => String(Math.round(v))}
+              tickMode="date"
+              brush
+            />
+          ) : joins.loading ? (
+            <PanelLoading lines={3} />
+          ) : (
+            <PanelError
+              message={joins.error ?? "Join trends are unavailable."}
+              onRetry={joins.refresh}
+            />
+          )}
+        </ChartShell>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <KpiCard

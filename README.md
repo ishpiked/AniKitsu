@@ -12,9 +12,8 @@ watch in the browser or inside Telegram, solo or in a synced room.
 | Service status | `/status` | Public, unauthenticated sanitized snapshot |
 | Blog | `/blog` | Public reading; owner-only writing |
 | Bot guide | `/bot` | Public command reference |
-| Profile | `/profile` | Public page; private stats auto-fetch inside Telegram |
-| Operator dashboard | `/dev` | Telegram identity; bot owner only |
-| Account bootstrap | `/login` | Silent Telegram verification for owner-only Dev access |
+| Operator dashboard | `/dev` | Passphrase-gated operator area |
+| Sign in | `/login` | Operator passphrase sign-in |
 
 ## The Telegram bot
 
@@ -40,9 +39,8 @@ A full command-by-command reference lives in the in-app feature catalog
 ## Operator dashboard (`/dev`)
 
 Read-only coverage built on the backend monitoring and admin analytics APIs. Every
-`/dev` page and its BFF endpoints require a verified Telegram session whose
-user ID matches `KITSU_OWNER_USER_ID`. The Dev link is only rendered for that
-signed-in owner; all public site sections remain available to everyone.
+`/dev` page and its BFF endpoints require a valid operator session signed in
+with the `DASHBOARD_PASSPHRASE` gate at `/login`.
 
 - **Overview**: overall Operational / Degraded / Down / Unknown verdict with
   reasons, plus API, bot, provider, traffic, audience, and history cards.
@@ -52,25 +50,11 @@ signed-in owner; all public site sections remain available to everyone.
   stale samples marked, and a state-change log.
 - **Audience**: DAU/WAU/MAU buckets, joins and leaves, heartbeat watch-time splits, and alert audience from the protected admin analytics, plus eligibility totals kept distinct from activity counts.
 - **Watch Together**: live room summaries from the read-only admin rooms endpoint (process-local scope), with locked, presence, and playback state.
-- **Activity**: bounded, redacted event feed with entity, type, and time filters.
 - **Feature Catalog**: searchable catalog of every bot capability.
 
 Charts show UTC timestamps, keep gaps for missing samples, and never render
 failures as zeros. Ranges from 1 hour to 90 days; history payloads are
 decimated server-side for transfer speed.
-
-## Profile (`/profile`)
-
-Inside the Kitsu Telegram WebApp, the profile sends Telegram's signed Mini App
-data directly to the server. The server verifies it and requests only that
-Telegram user's record; no sign-in screen, dashboard session, or browser-
-supplied user ID is used for personal stats. Outside Telegram, the page asks
-the visitor to open Kitsu in the Mini App. The profile includes the verified
-Telegram photo when supplied, account and alert status, supporter/star totals,
-watch-request counts, saved movie and episode counts, 90-day activity count,
-heartbeat-measured movie and series watch time, up to 100 recent saved watches
-with resume progress, and up to 100 recent activity events. Profile responses
-are private and uncached.
 
 ## Blog (`/blog`)
 
@@ -79,7 +63,7 @@ notes written in the dashboard by the bot owner. The backend bot must be an
 administrator in that channel, `UPDATES_CHANNEL_ID` must identify it, and
 MongoDB must be configured. New channel posts and edits are mirrored while the
 bot is receiving Telegram updates; older channel posts are not imported
-retroactively. Only the verified owner session can create, edit, or delete
+retroactively. Only a signed-in operator session can create, edit, or delete
 dashboard-written posts. Channel announcements link back to their Telegram
 message.
 
@@ -91,20 +75,15 @@ exposed to the browser or the public status page.
 | Variable | Purpose |
 |---|---|
 | `KITSU_API_URL` | Base URL of the FastAPI backend (no trailing slash) |
-| `KITSU_BOT_TOKEN` | Same bot token used to verify Telegram WebApp and Login Widget data |
-| `KITSU_BOT_USERNAME` | Public bot username (without `@`) for Telegram links |
-| `KITSU_OWNER_USER_ID` | Telegram owner ID; must match backend `OWNER_USER_ID` |
 | `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
+| `DASHBOARD_PASSPHRASE` | Shared passphrase guarding `/dev` sign-in |
 | `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed sessions |
 | `DASHBOARD_SESSION_TTL_SECONDS` | Session lifetime, optional (default 12h) |
 
 Copy `.env.example` to your hosting provider's environment settings. Set the
-bot token, owner ID, API token, and a random session secret in the webapp
-deployment. The bot username defaults to `AniKitsuBot` and can be overridden
-with `KITSU_BOT_USERNAME`. Personal profiles are available when Kitsu is opened
-inside Telegram; they use signed Mini App init data and do not require a
-dashboard session. The session secret remains necessary for the owner-only
-server-rendered Dev area. The bot token and owner API token stay server-side;
+passphrase, API token, and a random session secret in the webapp
+deployment. The session secret signs the operator session cookie for the
+passphrase-gated Dev area. The owner API token stays server-side;
 never commit real values.
 
 ## Develop

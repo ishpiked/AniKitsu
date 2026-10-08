@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CalendarDays, Clock, Pause, Play, RefreshCw } from "@/lib/icons";
+import { Pause, Play, RefreshCw } from "@/lib/icons";
 import { useKitsu } from "@/hooks/use-kitsu";
 import { Button } from "@/components/ui/button";
-import { OptionDropdown } from "@/components/option-dropdown";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -17,25 +17,18 @@ import {
   ChartShell,
   KpiCard,
   PanelError,
+  PanelLoading,
   TimeSeriesChart,
-  type SeriesPoint,
 } from "@/components/charts";
-import { AdminState } from "@/components/admin-state";
 import {
   alignAnalyticsWindow,
-  bucketNumericSeries,
-  findCoverageStart,
   formatNumber,
-  formatShortDuration,
+  formatPercent,
   formatUtc,
 } from "@/lib/kitsu/derive";
 import type {
   AdminOverview,
-  AlertAnalytics,
-  AnalyticsBucket,
-  AudienceAnalytics,
   PrometheusData,
-  WatchTimeAnalytics,
 } from "@/lib/kitsu/types";
 
 const RANGE_PRESETS = [
@@ -43,27 +36,6 @@ const RANGE_PRESETS = [
   { label: "Last 30 days", hours: 720 },
   { label: "Last 90 days", hours: 2160 },
 ] as const;
-
-const BUCKET_OPTIONS = [
-  { label: "Daily · DAU", value: "day" },
-  { label: "Weekly · WAU", value: "week" },
-  { label: "Monthly · MAU", value: "month" },
-] as const;
-
-const ACTIVE_LABEL: Record<AnalyticsBucket, string> = {
-  day: "Daily active users",
-  week: "Weekly active users",
-  month: "Monthly active users",
-};
-
-const SERIES_COLORS = [
-  "#0ea5e9",
-  "#8b5cf6",
-  "#10b981",
-  "#f59e0b",
-  "#f43f5e",
-  "#06b6d4",
-];
 
 export interface Initial<T> {
   data: T | null;
@@ -73,34 +45,223 @@ export interface Initial<T> {
 
 interface Props {
   initialRangeHours: number;
-  initialBucket: AnalyticsBucket;
   initialWindow: { from: string; to: string };
   initialMetrics: Initial<PrometheusData>;
   initialAdmin: Initial<AdminOverview>;
-  initialAudience: Initial<AudienceAnalytics>;
-  initialWatch: Initial<WatchTimeAnalytics>;
-  initialAlerts: Initial<AlertAnalytics>;
 }
 
-function toSeriesPoints<TBucket extends { start: string }>(
-  buckets: TBucket[],
-  pick: (b: TBucket) => Record<string, number | null>
-): SeriesPoint[] {
-  return buckets.map((b) => ({ t: b.start, values: pick(b) }));
+const PAGE_LIMIT = 200;
+const MAX_PAGES = 25;
+
+function recordBody(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function dayKey(time: number): string {
+  const d = new Date(time);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+async function fetchRecordPage(
+  kind: "users" | "groups",
+  offset: number,
+  signal: AbortSignal
+): Promise<{ items: Record<string, unknown>[]; total: number | null }> {
+  const params = new URLSearchParams({
+    limit: String(PAGE_LIMIT),
+    offset: String(offset),
+  });
+  const response = await fetch(`/api/kitsu/api/owner/${kind}?${params}`, {
+    cache: "no-store",
+    signal,
+  });
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(`Backend returned an unreadable response (${response.status}).`);
+  }
+  if (response.status === 401) {
+    const err = new Error("Operator session expired. Sign in again.");
+    err.name = "SessionExpiredError";
+    throw err;
+  }
+  if (!response.ok) {
+    const body = recordBody(result);
+    throw new Error(
+      typeof body?.error === "string"
+        ? body.error
+        : `Backend responded ${response.status}.`
+    );
+  }
+  const body = recordBody(result);
+  const items = body && Array.isArray(body.items) ? body.items : [];
+  return {
+    items: items
+      .map(recordBody)
+      .filter((item): item is Record<string, unknown> => item !== null),
+    total: body && typeof body.total === "number" ? body.total : null,
+  };
+}
+
+async function fetchAllRecords(
+  kind: "users" | "groups",
+  signal: AbortSignal
+): Promise<Record<string, unknown>[]> {
+  const first = await fetchRecordPage(kind, 0, signal);
+  const pages = Math.min(
+    MAX_PAGES,
+    Math.ceil((first.total ?? first.items.length) / PAGE_LIMIT)
+  );
+  if (pages <= 1) return first.items;
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) =>
+      fetchRecordPage(kind, (i + 1) * PAGE_LIMIT, signal)
+    )
+  );
+  return first.items.concat(rest.flatMap((page) => page.items));
+}
+
+export interface TrendDay {
+  t: string;
+  active: number;
+  userJoins: number;
+  userLeaves: number;
+  groupJoins: number;
+  groupLeaves: number;
+}
+
+export interface RecordTrends {
+  from: string;
+  to: string;
+  days: TrendDay[];
+  alertOptIns: number;
+  userTotal: number;
+}
+
+function bucketDay(
+  counts: Map<string, number>,
+  item: Record<string, unknown>,
+  dateKey: string,
+  fromMs: number,
+  toMs: number
+): void {
+  const raw = typeof item[dateKey] === "string" ? item[dateKey] : null;
+  if (!raw) return;
+  const time = Date.parse(raw);
+  if (!Number.isFinite(time) || time < fromMs || time >= toMs) return;
+  const key = dayKey(time);
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+/**
+ * Audience trends derived from account records instead of the analytics
+ * pipeline (whose lifecycle counters have no historical coverage): active
+ * users per day of last activity, exact joins/leaves from first_seen,
+ * left_at, added_at, removed_at, and the current alert opt-in count.
+ */
+function useRecordTrends(rangeHours: number, paused: boolean) {
+  const [data, setData] = React.useState<RecordTrends | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [sessionExpired, setSessionExpired] = React.useState(false);
+  const [tick, setTick] = React.useState(0);
+  const refresh = React.useCallback(() => setTick((t) => t + 1), []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function run() {
+      try {
+        const window = alignAnalyticsWindow(rangeHours, "day");
+        const fromMs = Date.parse(window.from);
+        const toMs = Date.parse(window.to);
+        const [users, groups] = await Promise.all([
+          fetchAllRecords("users", controller.signal),
+          fetchAllRecords("groups", controller.signal),
+        ]);
+        if (cancelled) return;
+        const active = new Map<string, number>();
+        const userJoins = new Map<string, number>();
+        const userLeaves = new Map<string, number>();
+        const groupJoins = new Map<string, number>();
+        const groupLeaves = new Map<string, number>();
+        let alertOptIns = 0;
+        for (const item of users) {
+          bucketDay(active, item, "last_active", fromMs, toMs);
+          bucketDay(userJoins, item, "first_seen", fromMs, toMs);
+          bucketDay(userLeaves, item, "left_at", fromMs, toMs);
+          if (item.alerts_on === true) alertOptIns += 1;
+        }
+        for (const item of groups) {
+          bucketDay(groupJoins, item, "added_at", fromMs, toMs);
+          bucketDay(groupLeaves, item, "removed_at", fromMs, toMs);
+        }
+        const days: TrendDay[] = [];
+        for (
+          let cursor = Math.floor(fromMs / 86_400_000) * 86_400_000;
+          cursor < toMs;
+          cursor += 86_400_000
+        ) {
+          const key = dayKey(cursor);
+          days.push({
+            t: new Date(cursor).toISOString(),
+            active: active.get(key) ?? 0,
+            userJoins: userJoins.get(key) ?? 0,
+            userLeaves: userLeaves.get(key) ?? 0,
+            groupJoins: groupJoins.get(key) ?? 0,
+            groupLeaves: groupLeaves.get(key) ?? 0,
+          });
+        }
+        setData({
+          from: window.from,
+          to: window.to,
+          days,
+          alertOptIns,
+          userTotal: users.length,
+        });
+        setError(null);
+        setSessionExpired(false);
+        setLoading(false);
+      } catch (reason) {
+        if (cancelled) return;
+        if (reason instanceof Error && reason.name === "AbortError") return;
+        if (reason instanceof Error && reason.name === "SessionExpiredError") {
+          setSessionExpired(true);
+        }
+        setError(
+          reason instanceof Error ? reason.message : "Could not load audience trends."
+        );
+        setLoading(false);
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [rangeHours, tick]);
+
+  React.useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(refresh, 45000);
+    return () => window.clearInterval(id);
+  }, [paused, refresh]);
+
+  return { data, error, loading, sessionExpired, refresh };
 }
 
 export default function AudienceView({
   initialRangeHours,
-  initialBucket,
   initialWindow,
   initialMetrics,
   initialAdmin,
-  initialAudience,
-  initialWatch,
-  initialAlerts,
 }: Props) {
   const [rangeHours, setRangeHours] = React.useState(initialRangeHours);
-  const [bucket, setBucket] = React.useState<AnalyticsBucket>(initialBucket);
   const [paused, setPaused] = React.useState(false);
   // Pinned to the server-rendered window until the operator changes the
   // range, so first paint never refetches on a millisecond mismatch.
@@ -109,23 +270,10 @@ export default function AudienceView({
     to: string;
   } | null>(null);
   const window = windowOverride ?? initialWindow;
-  const query = React.useMemo(
-    () => ({ from: window.from, to: window.to, bucket }),
-    [window, bucket]
-  );
-  const isInitialWindow =
-    window.from === initialWindow.from &&
-    window.to === initialWindow.to &&
-    bucket === initialBucket;
 
   const changeRange = (nextHours: number) => {
     setRangeHours(nextHours);
-    setWindowOverride(alignAnalyticsWindow(nextHours, bucket));
-  };
-
-  const changeBucket = (nextBucket: AnalyticsBucket) => {
-    setBucket(nextBucket);
-    setWindowOverride(alignAnalyticsWindow(rangeHours, nextBucket));
+    setWindowOverride(alignAnalyticsWindow(nextHours, "day"));
   };
 
   const metrics = useKitsu<PrometheusData>("metrics", {
@@ -139,85 +287,27 @@ export default function AudienceView({
     initialError: initialAdmin.error,
     initialCode: initialAdmin.code,
   });
-  const audience = useKitsu<AudienceAnalytics>("api/admin/analytics/audience", {
-    query,
-    paused,
-    initialData: isInitialWindow ? (initialAudience.data ?? undefined) : undefined,
-    initialError: isInitialWindow ? initialAudience.error : null,
-    initialCode: isInitialWindow ? initialAudience.code : null,
-  });
-  const watch = useKitsu<WatchTimeAnalytics>("api/admin/analytics/watch-time", {
-    query,
-    paused,
-    initialData: isInitialWindow ? (initialWatch.data ?? undefined) : undefined,
-    initialError: isInitialWindow ? initialWatch.error : null,
-    initialCode: isInitialWindow ? initialWatch.code : null,
-  });
-  const alerts = useKitsu<AlertAnalytics>("api/admin/analytics/alerts", {
-    query,
-    paused,
-    initialData: isInitialWindow ? (initialAlerts.data ?? undefined) : undefined,
-    initialError: isInitialWindow ? initialAlerts.error : null,
-    initialCode: isInitialWindow ? initialAlerts.code : null,
-  });
+  const trends = useRecordTrends(rangeHours, paused);
 
   const refreshAll = () => {
     metrics.refresh();
     admin.refresh();
-    audience.refresh();
-    watch.refresh();
-    alerts.refresh();
+    trends.refresh();
   };
 
   const sessionExpired =
-    metrics.sessionExpired ||
-    audience.sessionExpired ||
-    watch.sessionExpired ||
-    alerts.sessionExpired;
+    metrics.sessionExpired || trends.sessionExpired;
 
-  const audienceBuckets = audience.data?.buckets ?? [];
-  const activePoints = toSeriesPoints(audienceBuckets, (b) => ({
-    active: b.active_users ?? null,
-  }));
-  const lifecyclePoints = toSeriesPoints(audienceBuckets, (b) => ({
-    user_joins: b.user_joins ?? null,
-    user_leaves: b.user_leaves ?? null,
-    group_joins: b.group_joins ?? null,
-    group_leaves: b.group_leaves ?? null,
-  }));
-
-  const watchBuckets = watch.data?.buckets ?? [];
-  const watchSeries = [
-    {
-      key: "movie_seconds",
-      label: "Movies",
-      points: watchBuckets.map((b) => ({
-        t: b.start,
-        value: b.watch_time_seconds?.movie ?? null,
-      })),
-    },
-    {
-      key: "series_seconds",
-      label: "Series",
-      points: watchBuckets.map((b) => ({
-        t: b.start,
-        value: b.watch_time_seconds?.series ?? null,
-      })),
-    },
-  ];
-
-  const alertSeries = bucketNumericSeries(alerts.data?.buckets ?? []);
-
-  const coverage =
-    findCoverageStart(audience.data?.definitions) ??
-    findCoverageStart(watch.data?.definitions) ??
-    findCoverageStart(alerts.data?.definitions);
-  const rangeMeta = `Buckets: ${bucket} (UTC) · window ${formatUtc(window.from)} → ${formatUtc(window.to)}`;
+  const rangeMeta = `Last ${Math.round(rangeHours / 24)} days · day buckets (UTC) · window ${formatUtc(window.from)} → ${formatUtc(window.to)}`;
   const gapNote =
-    "Windows align to bucket boundaries and only complete buckets are returned. Missing points mean unavailable coverage, not zero.";
+    "Only complete days are counted. A user active on many days counts once, on the day of their latest activity.";
 
   const basis =
     admin.data?.audience?.users?.active_basis ?? "backend_eligibility_status";
+  const alertShare =
+    trends.data && trends.data.userTotal > 0
+      ? (trends.data.alertOptIns / trends.data.userTotal) * 100
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -225,34 +315,24 @@ export default function AudienceView({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Audience</h1>
           <p className="text-sm text-muted-foreground">
-            Time-bucketed product analytics from the protected admin API.
-            Eligibility counts and DAU/WAU are different things; both are
-            shown with their definitions.
+            Community trends counted from account records. Eligibility counts
+            are current flags, not activity; both are shown with their
+            definitions.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <OptionDropdown
-            value={bucket}
-            onChange={(v) => changeBucket(v as AnalyticsBucket)}
-            label="Bucket size"
-            icon={CalendarDays}
-            className="w-44"
-            options={BUCKET_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-          />
-          <OptionDropdown
-            value={String(rangeHours)}
-            onChange={(v) => changeRange(Number(v))}
-            label="Time range"
-            icon={Clock}
-            className="w-44"
-            options={RANGE_PRESETS.map((o) => ({
-              value: String(o.hours),
-              label: o.label,
-            }))}
-          />
+          <Select value={String(rangeHours)} onValueChange={(v: string) => changeRange(Number(v))}>
+            <SelectTrigger className="w-44" aria-label="Time range">
+              <SelectValue placeholder="Time range" />
+            </SelectTrigger>
+            <SelectContent>
+              {RANGE_PRESETS.map((o) => (
+                <SelectItem key={String(o.hours)} value={String(o.hours)}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             size="sm"
@@ -292,7 +372,7 @@ export default function AudienceView({
           value={formatNumber(
             admin.data?.audience?.users?.active ?? metrics.data?.usersActive
           )}
-          sub={`Basis: ${basis}. Not DAU/WAU.`}
+          sub={`Basis: ${basis}. Not daily activity.`}
         />
         <KpiCard
           label="Total groups"
@@ -308,42 +388,65 @@ export default function AudienceView({
           )}
           sub="Groups with active status."
         />
+        <KpiCard
+          label="Alert opt-ins"
+          value={trends.data ? String(trends.data.alertOptIns) : "—"}
+          sub="Users with title alerts on, right now."
+        />
+        <KpiCard
+          label="Opt-in share"
+          value={alertShare === null ? "—" : formatPercent(alertShare)}
+          sub="Opted-in users of all fetched users."
+        />
       </div>
       {metrics.error && !metrics.data ? (
         <PanelError message={metrics.error} onRetry={metrics.refresh} />
       ) : null}
 
       <ChartShell
-        title={ACTIVE_LABEL[bucket]}
-        description="Distinct users with a persisted activity event in each UTC bucket. Event source covers all stored activity event types."
-        meta={`${rangeMeta}${coverage ? ` · coverage from ${formatUtc(coverage)}` : ""}`}
+        title="Active users"
+        description="Users grouped by day of last recorded activity. A user active on many days counts once, on their latest day."
+        meta={rangeMeta}
         footer={<p className="text-[11px] text-muted-foreground">{gapNote}</p>}
       >
-        {audience.data ? (
+        {trends.data ? (
           <TimeSeriesChart
-            points={activePoints}
-            series={[{ key: "active", label: ACTIVE_LABEL[bucket], color: "#0ea5e9" }]}
+            points={trends.data.days.map((d) => ({
+              t: d.t,
+              values: { active: d.active },
+            }))}
+            series={[{ key: "active", label: "Active users", color: "#0ea5e9" }]}
             formatY={(v) => String(Math.round(v))}
+            tickMode="date"
             brush
           />
+        ) : trends.loading ? (
+          <PanelLoading lines={3} />
         ) : (
-          <AdminState
-            code={audience.errorCode}
-            error={audience.error}
-            onRetry={audience.refresh}
+          <PanelError
+            message={trends.error ?? "Audience trends are unavailable."}
+            onRetry={trends.refresh}
           />
         )}
       </ChartShell>
 
       <ChartShell
         title="Membership changes"
-        description="User and group joins and leaves per bucket, from daily transition counters."
+        description="Joins and leaves per day, from first-seen and removal timestamps on account records."
         meta={rangeMeta}
         footer={<p className="text-[11px] text-muted-foreground">{gapNote}</p>}
       >
-        {audience.data ? (
+        {trends.data ? (
           <TimeSeriesChart
-            points={lifecyclePoints}
+            points={trends.data.days.map((d) => ({
+              t: d.t,
+              values: {
+                user_joins: d.userJoins,
+                user_leaves: d.userLeaves,
+                group_joins: d.groupJoins,
+                group_leaves: d.groupLeaves,
+              },
+            }))}
             series={[
               { key: "user_joins", label: "User joins", color: "#10b981" },
               { key: "user_leaves", label: "User leaves", color: "#f43f5e" },
@@ -351,79 +454,15 @@ export default function AudienceView({
               { key: "group_leaves", label: "Group leaves", color: "#f59e0b" },
             ]}
             formatY={(v) => String(Math.round(v))}
+            tickMode="date"
             brush
           />
+        ) : trends.loading ? (
+          <PanelLoading lines={3} />
         ) : (
-          <AdminState
-            code={audience.errorCode}
-            error={audience.error}
-            onRetry={audience.refresh}
-          />
-        )}
-      </ChartShell>
-
-      <ChartShell
-        title="Recorded watch time"
-        description="Heartbeat-measured playback seconds by media type. Estimated playback time, not unique viewers or completed titles."
-        meta={rangeMeta}
-        footer={<p className="text-[11px] text-muted-foreground">{gapNote}</p>}
-      >
-        {watch.data ? (
-          <TimeSeriesChart
-            points={watch.data.buckets.map((b) => {
-              const values: Record<string, number | null> = {};
-              for (const s of watchSeries) {
-                const hit = s.points.find((p) => p.t === b.start);
-                values[s.key] = hit ? hit.value : null;
-              }
-              return { t: b.start, values };
-            })}
-            series={watchSeries.map((s, i) => ({
-              key: s.key,
-              label: s.label,
-              color: SERIES_COLORS[i % SERIES_COLORS.length],
-            }))}
-            formatY={formatShortDuration}
-            brush
-          />
-        ) : (
-          <AdminState
-            code={watch.errorCode}
-            error={watch.error}
-            onRetry={watch.refresh}
-          />
-        )}
-      </ChartShell>
-
-      <ChartShell
-        title="Alert audience"
-        description="Opted-in alert preference count at each bucket end, independent of account eligibility."
-        meta={rangeMeta}
-        footer={<p className="text-[11px] text-muted-foreground">{gapNote}</p>}
-      >
-        {alerts.data ? (
-          <TimeSeriesChart
-            points={alerts.data.buckets.map((b) => {
-              const values: Record<string, number | null> = {};
-              for (const s of alertSeries) {
-                const hit = s.points.find((p) => p.t === b.start);
-                values[s.key] = hit ? hit.value : null;
-              }
-              return { t: b.start, values };
-            })}
-            series={alertSeries.map((s, i) => ({
-              key: s.key,
-              label: s.label,
-              color: SERIES_COLORS[i % SERIES_COLORS.length],
-            }))}
-            formatY={(v) => String(Math.round(v))}
-            brush
-          />
-        ) : (
-          <AdminState
-            code={alerts.errorCode}
-            error={alerts.error}
-            onRetry={alerts.refresh}
+          <PanelError
+            message={trends.error ?? "Audience trends are unavailable."}
+            onRetry={trends.refresh}
           />
         )}
       </ChartShell>
@@ -436,22 +475,22 @@ export default function AudienceView({
         <CardContent>
           <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
             <li>
-              DAU, WAU, and MAU count distinct users with a persisted activity
-              event in the UTC day, Monday-based week, or calendar month.
+              Active users groups each account by the UTC day of its last
+              recorded activity. It understates repeat activity: a user
+              active every day counts once.
+            </li>
+            <li>
+              Joins come from first-seen (users) and added-at (groups)
+              timestamps and are exact. Leaves come from removal timestamps
+              where the backend records them.
             </li>
             <li>
               Eligibility and status counts are current flags, not activity.
-              Never present them as DAU/WAU.
+              Never present them as daily actives.
             </li>
             <li>
-              Watch time accumulates on Mini App heartbeats and is
-              recorded/estimated playback time, not unique viewers or
-              completed titles.
-            </li>
-            <li>
-              Lifecycle counters, watch-time buckets, and alert history begin
-              with their reported coverage. Older history is unavailable, not
-              zero.
+              Alert opt-ins is a current snapshot of the alerts-on flag, not
+              a history.
             </li>
             <li>
               Request totals and latency counters are process-local: a restart
@@ -459,16 +498,6 @@ export default function AudienceView({
               aggregation.
             </li>
           </ul>
-          {audience.data?.definitions ? (
-            <details className="pt-3 text-xs">
-              <summary className="cursor-pointer font-medium text-foreground">
-                Backend-reported definitions
-              </summary>
-              <pre className="no-scrollbar mt-2 overflow-x-auto rounded-md border bg-muted/50 p-3 text-muted-foreground">
-                {JSON.stringify(audience.data.definitions, null, 2)}
-              </pre>
-            </details>
-          ) : null}
         </CardContent>
       </Card>
     </div>

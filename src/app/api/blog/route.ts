@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { getRequestSession } from "@/lib/auth";
+import { isOperatorRequest } from "@/lib/auth";
 import { parseBlogPost, type BlogFeed, type BlogPost } from "@/lib/blog";
-import { isOwnerUser } from "@/lib/owner";
-import { verifyTelegramInitData } from "@/lib/telegram-auth";
 import {
   BACKEND_TIMEOUT_MS,
   adminToken,
@@ -90,35 +88,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   });
 }
 
-async function ownerSession(
-  request: Request,
-  initData: string
+async function requireOperatorSession(
+  request: Request
 ): Promise<NextResponse | null> {
-  const session = await getRequestSession(request);
-  if (session === null) return apiError("Sign in required.", 401);
-  if (initData) {
-    // Keep account binding usable throughout the default 12-hour session.
-    const identity = verifyTelegramInitData(
-      initData,
-      process.env.KITSU_BOT_TOKEN ?? "",
-      Date.now(),
-      12 * 60 * 60
-    );
-    if (!identity) {
-      return apiError(
-        "Could not verify this Telegram account. Reopen Kitsu in Telegram and try again.",
-        401
-      );
-    }
-    if (identity.userId !== session.userId) {
-      return apiError(
-        "The signed-in account does not match this Telegram account.",
-        403
-      );
-    }
-  }
-  if (!isOwnerUser(session.userId)) {
-    return apiError("Only the bot owner can manage blog posts.", 403);
+  if (!(await isOperatorRequest(request))) {
+    return apiError("Sign in required.", 401);
   }
   return null;
 }
@@ -169,9 +143,7 @@ function parsePostInput(value: unknown) {
 
 export async function POST(request: Request): Promise<NextResponse> {
   const payload = await readBody(request);
-  const submitted = record(payload);
-  const initData = typeof submitted?.initData === "string" ? submitted.initData : "";
-  const denied = await ownerSession(request, initData);
+  const denied = await requireOperatorSession(request);
   if (denied) return denied;
   const input = parsePostInput(payload);
   if (!input) {
@@ -185,8 +157,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
 export async function PATCH(request: Request): Promise<NextResponse> {
   const body = record(await readBody(request));
-  const initData = typeof body?.initData === "string" ? body.initData : "";
-  const denied = await ownerSession(request, initData);
+  const denied = await requireOperatorSession(request);
   if (denied) return denied;
   const postId = typeof body?.postId === "string" ? body.postId : "";
   const input = parsePostInput(body);
@@ -202,8 +173,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
 export async function DELETE(request: Request): Promise<NextResponse> {
   const body = record(await readBody(request));
-  const initData = typeof body?.initData === "string" ? body.initData : "";
-  const denied = await ownerSession(request, initData);
+  const denied = await requireOperatorSession(request);
   if (denied) return denied;
   const postId = typeof body?.postId === "string" ? body.postId : "";
   if (!/^[0-9a-f]{32}$/.test(postId)) {

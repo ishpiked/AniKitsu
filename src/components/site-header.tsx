@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BookOpen, Bot, House, Users } from "@/lib/icons";
+import { Activity, BookOpen, Bot, House, LayoutDashboard } from "@/lib/icons";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UtcClock } from "@/components/utc-clock";
@@ -14,7 +14,7 @@ const links = [
   { href: "/status", label: "Status", icon: Activity },
   { href: "/blog", label: "Blog", icon: BookOpen },
   { href: "/bot", label: "Bot", icon: Bot },
-  { href: "/profile", label: "Profile", icon: Users },
+  { href: "/dev", label: "Dev", icon: LayoutDashboard },
 ];
 
 /**
@@ -22,48 +22,24 @@ const links = [
  * theme — no hardcoded dark glass. Hidden inside the operator area and the
  * login page, which have their own chrome. Hooks stay above the early
  * return (Rules of Hooks).
+ *
+ * The Dev link is always shown: /dev itself is gated by the operator
+ * passphrase session, and unauthenticated visitors are bounced to /login.
  */
 export function SiteHeader() {
   const pathname = usePathname();
-  const [ownerAccess, setOwnerAccess] = React.useState<{
-    path: string;
-    isOwner: boolean;
-  } | null>(null);
   const hidden = pathname.startsWith("/dev") || pathname.startsWith("/login");
 
   React.useEffect(() => {
-    if (hidden) {
-      setOwnerAccess(null);
-      return;
-    }
-    let active = true;
-    fetch("/api/auth/session", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Could not verify dashboard access.");
-        return (await response.json()) as { isOwner?: boolean };
-      })
-      .then((session) => {
-        if (active) {
-          setOwnerAccess({ path: pathname, isOwner: session.isOwner === true });
-        }
-      })
-      .catch(() => {
-        if (active) setOwnerAccess({ path: pathname, isOwner: false });
-      });
+    if (hidden) return;
     document.body.classList.add("has-site-nav");
     return () => {
-      active = false;
       document.body.classList.remove("has-site-nav");
     };
-  }, [hidden, pathname]);
+  }, [hidden]);
 
   if (hidden) return null;
 
-  const isOwner =
-    ownerAccess?.path === pathname && ownerAccess.isOwner === true;
-  const visibleLinks = isOwner
-    ? [...links, { href: "/dev", label: "Dev", icon: Activity }]
-    : links;
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
@@ -76,7 +52,7 @@ export function SiteHeader() {
             <span className="text-sm font-semibold tracking-tight">Kitsu</span>
           </Link>
           <nav aria-label="Site" className="hidden items-center gap-1 sm:flex">
-            {visibleLinks.map(({ href, label, exact }) => (
+            {links.map(({ href, label, exact }) => (
               <Link
                 key={href}
                 href={href}
@@ -105,7 +81,7 @@ export function SiteHeader() {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
       >
         <div className="flex items-center gap-1 rounded-full border bg-background/85 px-2 py-1.5 shadow-lg backdrop-blur-xl">
-          {visibleLinks.map(({ href, label, icon: Icon, exact }) => (
+          {links.map(({ href, label, icon: Icon, exact }) => (
             <Link
               key={href}
               href={href}

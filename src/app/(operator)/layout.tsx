@@ -33,7 +33,7 @@ export default async function OperatorLayout({
           <ThemeToggle />
         </div>
         <OperatorNav />
-        <div className="mt-auto hidden flex-col gap-2 md:flex">
+        <div className="mt-auto flex flex-col gap-2">
           <Separator />
           <form action={logoutAction}>
             <Button variant="ghost" size="sm" className="w-full justify-start" type="submit">
@@ -42,7 +42,7 @@ export default async function OperatorLayout({
             </Button>
           </form>
           <p className="text-[11px] leading-snug text-muted-foreground">
-            Owner access verified through your Telegram account.
+            Restricted area. Never share the operator passphrase.
           </p>
         </div>
       </aside>

@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRequestSession } from "@/lib/auth";
-import { isOwnerUser } from "@/lib/owner";
-import { verifyTelegramInitData } from "@/lib/telegram-auth";
-import type { PersonalProfile } from "@/lib/kitsu/types";
+import { isOperatorRequest } from "@/lib/auth";
 import {
   BACKEND_TIMEOUT_MS,
   adminToken,
@@ -10,8 +7,6 @@ import {
   clampHours,
   clampInt,
   parseBucket,
-  parseEntity,
-  parseToken,
   parseWindow,
   parsePrometheus,
   shapeMonitoringResponse,
@@ -20,8 +15,8 @@ import {
 export const dynamic = "force-dynamic";
 
 // Narrow allowlist of read-only backend endpoints the dashboard may call.
-// The browser never talks to the backend directly; operator data is checked
-// against the verified owner identity below.
+// The browser never talks to the backend directly and can only reach these
+// paths with a valid operator session.
 const ALLOWED: Record<string, { upstream: string; type: "json" | "metrics" }> = {
   health: { upstream: "/health", type: "json" },
   "api/monitoring": { upstream: "/api/monitoring", type: "json" },
@@ -74,375 +69,6 @@ function adminError(
   status: number
 ): NextResponse {
   return NextResponse.json({ error, code }, { status });
-}
-
-function profileError(
-  error: string,
-  code: AdminErrorCode,
-  status: number
-): NextResponse {
-  return NextResponse.json(
-    { error, code },
-    { status, headers: { "Cache-Control": "private, no-store" } }
-  );
-}
-
-function record(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function stringField(
-  source: Record<string, unknown>,
-  key: string
-): string | null {
-  return typeof source[key] === "string" ? source[key] : null;
-}
-
-function countField(
-  source: Record<string, unknown>,
-  key: string
-): number | null {
-  const value = source[key];
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-    ? value
-    : null;
-}
-
-function nullableNumberField(
-  source: Record<string, unknown>,
-  key: string
-): number | null {
-  const value = source[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function nullableBooleanField(
-  source: Record<string, unknown>,
-  key: string
-): boolean | null {
-  return typeof source[key] === "boolean" ? source[key] : null;
-}
-
-function safeHttpsUrl(value: string | null): string | null {
-  if (!value || value.length > 2048) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password
-      ? url.toString()
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function watchSecondsField(
-  source: Record<string, unknown>,
-  key: string
-): number | null {
-  if (!(key in source)) return 0;
-  const value = source[key];
-  return typeof value === "number" && Number.isFinite(value) && value >= 0
-    ? value
-    : null;
-}
-
-function profilePayload(
-  json: unknown,
-  userId: number,
-  photoUrl: string | undefined,
-  savedHistory: PersonalProfile["saved_history"],
-  activityLast90Days: number
-): PersonalProfile | null {
-  const payload = record(json);
-  const user = record(payload?.user);
-  const requests = record(payload?.watch_requests);
-  if (
-    !payload ||
-    !user ||
-    !requests ||
-    user.user_id !== userId ||
-    !Array.isArray(payload.recent_watches) ||
-    !Array.isArray(payload.recent_activity)
-  ) {
-    return null;
-  }
-  const movies = countField(requests, "movies");
-  const series = countField(requests, "series");
-  const total = countField(requests, "total");
-  if (
-    movies === null ||
-    series === null ||
-    total === null ||
-    total !== movies + series
-  ) {
-    return null;
-  }
-  const movieSeconds = watchSecondsField(user, "watch_sec_movies");
-  const seriesSeconds = watchSecondsField(user, "watch_sec_series");
-
-  const recentWatches = payload.recent_watches
-    .slice(0, 100)
-    .flatMap((entry) => {
-      const watch = record(entry);
-      const title = watch ? stringField(watch, "title") : null;
-      const mediaType = watch ? stringField(watch, "media_type") : null;
-      if (!watch || !title || !mediaType) return [];
-      return [
-        {
-          title,
-          media_type: mediaType,
-          season: nullableNumberField(watch, "season"),
-          episode: nullableNumberField(watch, "episode"),
-          updated_at: stringField(watch, "updated_at"),
-          completed:
-            typeof watch.completed === "boolean" ? watch.completed : null,
-          position_seconds: nullableNumberField(watch, "position"),
-          duration_seconds: nullableNumberField(watch, "duration"),
-        },
-      ];
-    });
-
-  const recentActivity = payload.recent_activity
-    .slice(0, 100)
-    .flatMap((entry) => {
-      const activity = record(entry);
-      const eventType = activity ? stringField(activity, "event_type") : null;
-      const timestamp = activity ? stringField(activity, "timestamp") : null;
-      if (!eventType || !timestamp) return [];
-      return [{ event_type: eventType, timestamp }];
-    });
-
-  return {
-    user: {
-      user_id: userId,
-      photo_url: safeHttpsUrl(photoUrl ?? null),
-      first_name:
-        stringField(user, "first_name") ?? stringField(user, "name"),
-      last_name: stringField(user, "last_name"),
-      username: stringField(user, "username"),
-      first_seen: stringField(user, "first_seen"),
-      last_active: stringField(user, "last_active"),
-      is_active: nullableBooleanField(user, "is_active"),
-      banned: nullableBooleanField(user, "banned"),
-      is_donor: nullableBooleanField(user, "is_donor"),
-      donated_stars: countField(user, "donated_stars"),
-      alerts_on: nullableBooleanField(user, "alerts_on"),
-    },
-    watch_requests: {
-      movies,
-      series,
-      total,
-    },
-    watch_time_seconds: {
-      movies: movieSeconds,
-      series: seriesSeconds,
-      total:
-        movieSeconds !== null && seriesSeconds !== null
-          ? movieSeconds + seriesSeconds
-          : null,
-    },
-    saved_history: savedHistory,
-    activity_last_90_days: activityLast90Days,
-    recent_watches: recentWatches,
-    recent_activity: recentActivity,
-  };
-}
-
-async function fetchOwnerEndpoint(
-  baseUrl: string,
-  token: string,
-  path: string
-): Promise<Response> {
-  return fetch(`${baseUrl}${path}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-/** Resolve a profile from a verified Telegram Mini App identity. */
-async function proxyPersonalProfile(
-  userId: number,
-  photoUrl: string | undefined
-): Promise<NextResponse> {
-  const token = adminToken();
-  if (!token) {
-    return profileError(
-      "Profile data is not configured: set KITSU_OWNER_API_TOKEN server-side.",
-      "not-configured",
-      503
-    );
-  }
-
-  let baseUrl: string;
-  try {
-    baseUrl = backendBaseUrl();
-  } catch (error) {
-    return profileError(
-      error instanceof Error ? error.message : "KITSU_API_URL is not configured.",
-      "not-configured",
-      503
-    );
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(
-      `${baseUrl}/api/owner/users/${userId}?activity_limit=100&watch_limit=100`,
-      {
-        cache: "no-store",
-        signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
-        headers: {
-          accept: "application/json",
-          authorization: `Bearer ${token}`,
-        },
-      }
-    );
-  } catch {
-    return profileError("Backend unreachable.", "unreachable", 502);
-  }
-
-  if (res.status === 404) {
-    return NextResponse.json(
-      {
-        error:
-          "No Kitsu account record was found. Start the AniKitsuBot once, then reload your profile.",
-      },
-      {
-        status: 404,
-        headers: { "Cache-Control": "private, no-store" },
-      }
-    );
-  }
-  if (res.status === 401 || res.status === 403) {
-    return profileError(
-      "Backend refused the owner credential. Check KITSU_OWNER_API_TOKEN.",
-      "forbidden",
-      502
-    );
-  }
-  if (!res.ok) {
-    return profileError(`Backend responded ${res.status}.`, "upstream", 502);
-  }
-
-  const watchHistoryQuery = (mediaType?: "movie" | "series") => {
-    const query = new URLSearchParams({
-      user_id: String(userId),
-      limit: "1",
-      offset: "0",
-    });
-    if (mediaType) query.set("media_type", mediaType);
-    return `/api/owner/watch-history?${query}`;
-  };
-  const activityQuery = new URLSearchParams({
-    entity: "user",
-    entity_id: String(userId),
-    hours: "2160",
-    limit: "1",
-    offset: "0",
-  });
-
-  let statsResponses: Response[];
-  try {
-    statsResponses = await Promise.all([
-      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery()),
-      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery("movie")),
-      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery("series")),
-      fetchOwnerEndpoint(
-        baseUrl,
-        token,
-        `/api/owner/activity?${activityQuery}`
-      ),
-    ]);
-  } catch {
-    return profileError("Backend unreachable.", "unreachable", 502);
-  }
-
-  if (
-    statsResponses.some(
-      (response) => response.status === 401 || response.status === 403
-    )
-  ) {
-    return profileError(
-      "Backend refused the owner credential. Check KITSU_OWNER_API_TOKEN.",
-      "forbidden",
-      502
-    );
-  }
-  const failedStats = statsResponses.find((response) => !response.ok);
-  if (failedStats) {
-    return profileError(
-      `Backend responded ${failedStats.status} while loading personal statistics.`,
-      "upstream",
-      502
-    );
-  }
-
-  let json: unknown;
-  let stats: unknown[];
-  try {
-    [json, ...stats] = await Promise.all([
-      res.json(),
-      ...statsResponses.map((response) => response.json()),
-    ]);
-  } catch {
-    return profileError(
-      "Backend returned invalid personal profile data.",
-      "upstream",
-      502
-    );
-  }
-  const [historyPayload, movieHistoryPayload, seriesHistoryPayload, activityPayload] =
-    stats.map(record);
-  const totalSaved = historyPayload ? countField(historyPayload, "total") : null;
-  const savedMovies = movieHistoryPayload
-    ? countField(movieHistoryPayload, "total")
-    : null;
-  const savedSeries = seriesHistoryPayload
-    ? countField(seriesHistoryPayload, "total")
-    : null;
-  const activityLast90Days = activityPayload
-    ? countField(activityPayload, "total")
-    : null;
-  if (
-    totalSaved === null ||
-    savedMovies === null ||
-    savedSeries === null ||
-    activityLast90Days === null
-  ) {
-    return profileError(
-      "Backend returned incomplete personal statistics.",
-      "upstream",
-      502
-    );
-  }
-
-  const profile = profilePayload(
-    json,
-    userId,
-    photoUrl,
-    {
-      total: totalSaved,
-      movies: savedMovies,
-      series_episodes: savedSeries,
-    },
-    activityLast90Days
-  );
-  if (!profile) {
-    return profileError(
-      "Backend returned an unexpected profile.",
-      "upstream",
-      502
-    );
-  }
-  return NextResponse.json(profile, {
-    headers: { "Cache-Control": "private, no-store" },
-  });
 }
 
 /**
@@ -601,8 +227,6 @@ function ownerDataRoute(
   key: string,
   params: URLSearchParams
 ): string | null | undefined {
-  if (key === "api/owner/overview") return "/api/owner/overview";
-
   const users = ownerQuery(
     params,
     { limit: 50, offset: 0 },
@@ -628,25 +252,6 @@ function ownerDataRoute(
       ? `/api/owner/users/${userId}?${query}`
       : null;
   }
-  if (key === "api/owner/watch-history") {
-    const query = ownerQuery(
-      params,
-      { limit: 50, offset: 0 },
-      { limit: [1, 200], offset: [0, 100_000] },
-      { media_type: new Set(["movie", "series"]) }
-    );
-    if (!query) return null;
-    const userId = params.get("user_id");
-    if (userId !== null) {
-      const parsed = signedId(userId);
-      if (parsed === null || parsed <= 0) return null;
-      query.set("user_id", String(parsed));
-    }
-    const search = params.get("q");
-    if (search !== null && search.length > 100) return null;
-    if (search?.trim()) query.set("q", search.trim());
-    return `/api/owner/watch-history?${query}`;
-  }
   if (key === "api/owner/groups") {
     const query = ownerQuery(
       params,
@@ -668,53 +273,6 @@ function ownerDataRoute(
       ? `/api/owner/groups/${chatId}?${query}`
       : null;
   }
-  if (key === "api/owner/leaderboards/watch-time") {
-    const query = ownerQuery(params, { limit: 50 }, { limit: [1, 100] });
-    return query ? `/api/owner/leaderboards/watch-time?${query}` : null;
-  }
-  if (key === "api/owner/schedules") {
-    const query = ownerQuery(
-      params,
-      { limit: 50, offset: 0 },
-      { limit: [1, 200], offset: [0, 100_000] },
-      {
-        status: new Set([
-          "all",
-          "pending",
-          "scheduled",
-          "completed",
-          "cancelled",
-        ]),
-      }
-    );
-    return query ? `/api/owner/schedules?${query}` : null;
-  }
-  if (key === "api/owner/activity") {
-    const query = ownerQuery(
-      params,
-      { hours: 168, limit: 50, offset: 0 },
-      { hours: [1, 2160], limit: [1, 200], offset: [0, 10_000] },
-      { entity: new Set(["all", "user", "group"]) }
-    );
-    if (!query) return null;
-    const entityId = params.get("entity_id");
-    if (entityId !== null) {
-      const parsed = signedId(entityId);
-      if (parsed === null) return null;
-      query.set("entity_id", String(parsed));
-    }
-    const eventType = params.get("event_type");
-    if (eventType !== null) {
-      const parsed = parseToken(eventType);
-      if (!parsed) return null;
-      query.set("event_type", parsed);
-    }
-    return `/api/owner/activity?${query}`;
-  }
-  if (key === "api/owner/analytics/usage") {
-    const query = ownerQuery(params, { days: 30 }, { days: [1, 90] });
-    return query ? `/api/owner/analytics/usage?${query}` : null;
-  }
   return undefined;
 }
 
@@ -727,20 +285,8 @@ export async function GET(
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  if (key === "profile") {
-    const session = await getRequestSession(request);
-    if (session === null) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-    return proxyPersonalProfile(session.userId, session.photoUrl);
-  }
-
-  const session = await getRequestSession(request);
-  if (session === null) {
+  if (!(await isOperatorRequest(request))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!isOwnerUser(session.userId)) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const ownerRoute = ownerDataRoute(key, params);
@@ -775,37 +321,10 @@ export async function GET(
     });
     return proxyAdmin(`/api/admin/v1/analytics/${kind}?${query}`);
   }
-  if (key === "api/admin/rooms") {
+  if (key.startsWith("api/admin/rooms")) {
     const limit = clampInt(params.get("limit"), 1, 200, 20);
     const offset = clampInt(params.get("offset"), 0, 10000, 0);
     return proxyAdmin(`/api/admin/v1/rooms?limit=${limit}&offset=${offset}`);
-  }
-  if (key === "api/admin/activity") {
-    const entity = parseEntity(params.get("entity") ?? "all") ?? "all";
-    const hours = clampInt(params.get("hours"), 1, 2160, 168);
-    const limit = clampInt(params.get("limit"), 1, 200, 50);
-    const offset = clampInt(params.get("offset"), 0, 10000, 0);
-    const query = new URLSearchParams({
-      entity,
-      hours: String(hours),
-      limit: String(limit),
-      offset: String(offset),
-    });
-    const entityId = parseToken(params.get("entity_id"));
-    const eventType = parseToken(params.get("event_type"));
-    if (
-      (params.get("entity_id") && !entityId) ||
-      (params.get("event_type") && !eventType)
-    ) {
-      return adminError(
-        "entity_id and event_type accept letters, digits, dot, dash, underscore (max 64).",
-        "bad-request",
-        400
-      );
-    }
-    if (entityId) query.set("entity_id", entityId);
-    if (eventType) query.set("event_type", eventType);
-    return proxyAdmin(`/api/admin/v1/activity?${query}`);
   }
 
   // --- Public monitoring namespace (no backend auth) ---
@@ -867,40 +386,11 @@ export async function POST(
 ) {
   const { path } = await ctx.params;
   const key = (path ?? []).join("/");
-  if (key === "profile") {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return profileError("Telegram Mini App data is required.", "bad-request", 400);
-    }
-    const submitted = record(body);
-    const initData =
-      typeof submitted?.initData === "string" ? submitted.initData : "";
-    const identity = verifyTelegramInitData(
-      initData,
-      process.env.KITSU_BOT_TOKEN ?? "",
-      Date.now(),
-      12 * 60 * 60
-    );
-    if (!identity) {
-      return profileError(
-        "Open Kitsu from Telegram to load your personal profile.",
-        "forbidden",
-        401
-      );
-    }
-    return proxyPersonalProfile(identity.userId, identity.photoUrl);
-  }
   if (key !== "api/owner/blog/images") {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const session = await getRequestSession(request);
-  if (session === null) {
+  if (!(await isOperatorRequest(request))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!isOwnerUser(session.userId)) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const contentType = request.headers.get("content-type") ?? "";

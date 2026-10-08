@@ -1,6 +1,5 @@
 import { computeTransitions, overallState } from "./derive";
 import type {
-  ActivityResponse,
   AdminOverview,
   AdminRoom,
   AdminRoomsResponse,
@@ -302,29 +301,6 @@ export async function getAdminRooms(
     return { ...(raw as object), rooms: items as AdminRoom[] };
   }
   return { ...(raw as object), rooms: [] };
-}
-
-export interface ActivityQuery {
-  entity: "all" | "user" | "group";
-  entityId: string | null;
-  eventType: string | null;
-  hours: number;
-  limit: number;
-  offset: number;
-}
-
-export async function getAdminActivity(
-  query: ActivityQuery
-): Promise<ActivityResponse> {
-  const params = new URLSearchParams({
-    entity: query.entity,
-    hours: String(query.hours),
-    limit: String(query.limit),
-    offset: String(query.offset),
-  });
-  if (query.entityId) params.set("entity_id", query.entityId);
-  if (query.eventType) params.set("event_type", query.eventType);
-  return fetchAdmin<ActivityResponse>(`/api/admin/v1/activity?${params}`);
 }
 
 export class BackendError extends Error {

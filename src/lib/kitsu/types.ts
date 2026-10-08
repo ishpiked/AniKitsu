@@ -116,15 +116,6 @@ export interface AudienceBucket {
   group_leaves: number | null;
 }
 
-export interface WatchTimeBucket {
-  start: string;
-  end: string;
-  watch_time_seconds: {
-    movie: number | null;
-    series: number | null;
-  };
-}
-
 export interface AlertBucket {
   start: string;
   end: string;
@@ -143,7 +134,6 @@ export interface AnalyticsResponse<TBucket> {
 }
 
 export type AudienceAnalytics = AnalyticsResponse<AudienceBucket>;
-export type WatchTimeAnalytics = AnalyticsResponse<WatchTimeBucket>;
 export type AlertAnalytics = AnalyticsResponse<AlertBucket>;
 
 export interface AdminRoom {
@@ -176,19 +166,6 @@ export interface AdminRoomsResponse {
   offset?: number | null;
   scope?: string | null;
   generated_at?: string | null;
-}
-
-export interface ActivityItem {
-  entity: string;
-  event_type: string;
-  timestamp: string;
-}
-
-export interface ActivityResponse {
-  items: ActivityItem[];
-  total?: number | null;
-  limit?: number | null;
-  offset?: number | null;
 }
 
 // --- Public (unauthenticated) status surface ---
@@ -299,51 +276,4 @@ export interface PrometheusData {
   httpRequests: HttpCounter[];
   httpDurationSum: HttpDurationStat[];
   httpDurationCount: HttpDurationStat[];
-}
-
-export interface PersonalProfile {
-  user: {
-    user_id: number;
-    photo_url: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    username: string | null;
-    first_seen: string | null;
-    last_active: string | null;
-    is_active: boolean | null;
-    banned: boolean | null;
-    is_donor: boolean | null;
-    donated_stars: number | null;
-    alerts_on: boolean | null;
-  };
-  watch_requests: {
-    movies: number;
-    series: number;
-    total: number;
-  };
-  watch_time_seconds: {
-    movies: number | null;
-    series: number | null;
-    total: number | null;
-  };
-  saved_history: {
-    total: number;
-    movies: number;
-    series_episodes: number;
-  };
-  activity_last_90_days: number;
-  recent_watches: Array<{
-    title: string;
-    media_type: string;
-    season: number | null;
-    episode: number | null;
-    updated_at: string | null;
-    completed: boolean | null;
-    position_seconds: number | null;
-    duration_seconds: number | null;
-  }>;
-  recent_activity: Array<{
-    event_type: string;
-    timestamp: string;
-  }>;
 }

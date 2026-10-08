@@ -148,6 +148,20 @@ function shortTick(iso: string, spanMs: number): string {
   return hm;
 }
 
+/** Date-only tick for day/week/month-bucketed analytics (midnight UTC). */
+function shortDateTick(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+/** Chronological order; unparseable timestamps sink to the end. */
+function byTime(a: { ms: number }, b: { ms: number }): number {
+  const x = Number.isNaN(a.ms) ? Number.POSITIVE_INFINITY : a.ms;
+  const y = Number.isNaN(b.ms) ? Number.POSITIVE_INFINITY : b.ms;
+  return x - y;
+}
+
 function fullUtc(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -187,6 +201,7 @@ export function TimeSeriesChart({
   height = 220,
   brush = false,
   emptyLabel = "No data in this range.",
+  tickMode = "auto",
 }: {
   points: SeriesPoint[];
   series: SeriesDef[];
@@ -194,17 +209,21 @@ export function TimeSeriesChart({
   height?: number;
   brush?: boolean;
   emptyLabel?: string;
+  /** "date" renders midnight-UTC bucket ticks without the redundant 00:00. */
+  tickMode?: "auto" | "date";
 }) {
   const [hidden, setHidden] = React.useState<Set<string>>(new Set());
 
   const rows = React.useMemo<ChartRow[]>(
     () =>
-      points.map((p) => ({
-        t: p.t,
-        ms: new Date(p.t).getTime(),
-        values: p.values,
-        stale: p.stale ?? {},
-      })),
+      points
+        .map((p) => ({
+          t: p.t,
+          ms: new Date(p.t).getTime(),
+          values: p.values,
+          stale: p.stale ?? {},
+        }))
+        .sort(byTime),
     [points]
   );
   const hasValues = React.useMemo(
@@ -271,7 +290,9 @@ export function TimeSeriesChart({
             axisLine={false}
             tickMargin={8}
             minTickGap={40}
-            tickFormatter={(iso: string) => shortTick(iso, spanMs)}
+            tickFormatter={(iso: string) =>
+              tickMode === "date" ? shortDateTick(iso) : shortTick(iso, spanMs)
+            }
           />
           <YAxis
             width={56}
@@ -326,7 +347,9 @@ export function TimeSeriesChart({
               dataKey="t"
               height={28}
               stroke="var(--border)"
-              tickFormatter={(iso: string) => shortTick(String(iso), spanMs)}
+              tickFormatter={(iso: string) =>
+                tickMode === "date" ? shortDateTick(String(iso)) : shortTick(String(iso), spanMs)
+              }
             />
           ) : null}
         </LineChart>
@@ -418,7 +441,14 @@ export function BarChart({
   emptyLabel?: string;
 }) {
   const rows = React.useMemo(
-    () => points.map((p) => ({ t: p.t, value: p.value })),
+    () =>
+      points
+        .map((p) => ({
+          t: p.t,
+          value: p.value,
+          ms: new Date(p.t).getTime(),
+        }))
+        .sort(byTime),
     [points]
   );
   const spanMs = React.useMemo(() => {

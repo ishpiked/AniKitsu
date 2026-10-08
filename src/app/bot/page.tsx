@@ -85,7 +85,7 @@ const guideSections = [
     title: "4. Set your defaults and use your library",
     paragraphs: [
       "Send /settings and tap the controls on the screen to choose your default server, video quality, and subtitle preference. These are your own defaults and only apply when the selected source supports them; you can still change available controls for an active player.",
-      "Send /track to see your recorded watch history and resume points. Open /continue to pick up where you left off, /recommend for suggestions based on your history, and /mystats for your personal watch statistics. The dashboard Profile section also shows your own account and watch details after you open it in Telegram or sign in in a browser.",
+      "Send /track to see your recorded watch history and resume points. Open /continue to pick up where you left off, /recommend for suggestions based on your history, and /mystats for your personal watch statistics.",
       "Resume points and watch time are recorded from playback activity. They are useful estimates, not proof that a whole movie or episode was watched.",
     ],
   },

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { BlogView } from "@/components/blog-view";
-import { getCurrentSession } from "@/lib/auth";
-import { isOwnerUser } from "@/lib/owner";
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Blog · Kitsu",
@@ -9,7 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogPage() {
-  const session = await getCurrentSession();
+  const store = await cookies();
+  const isOperator =
+    (await verifySession(
+      store.get(SESSION_COOKIE)?.value,
+      process.env.DASHBOARD_SESSION_SECRET ?? ""
+    )) !== null;
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-24 pb-12 md:px-8">
       <header className="flex flex-col gap-2">
@@ -22,7 +27,7 @@ export default async function BlogPage() {
           automatically. The bot owner can also publish notes directly.
         </p>
       </header>
-      <BlogView isOwner={session !== null && isOwnerUser(session.userId)} />
+      <BlogView isOperator={isOperator} />
     </main>
   );
 }
