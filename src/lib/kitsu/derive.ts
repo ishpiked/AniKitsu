@@ -283,6 +283,77 @@ export function requestRates(prev: RateSample, next: RateSample): RequestRates {
   };
 }
 
+/** UTC [from, to) window ending now, for analytics queries. */
+export function analyticsWindow(
+  hours: number,
+  now = Date.now()
+): { from: string; to: string } {
+  return {
+    from: new Date(now - hours * 3600 * 1000).toISOString(),
+    to: new Date(now).toISOString(),
+  };
+}
+
+/** Pull a coverage_start out of an analytics definitions block, if present. */
+export function findCoverageStart(
+  definitions: Record<string, unknown> | null | undefined
+): string | null {
+  if (!definitions || typeof definitions !== "object") return null;
+  if (typeof definitions.coverage_start === "string") {
+    return definitions.coverage_start;
+  }
+  for (const value of Object.values(definitions)) {
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      typeof (value as Record<string, unknown>).coverage_start === "string"
+    ) {
+      return (value as Record<string, unknown>).coverage_start as string;
+    }
+  }
+  return null;
+}
+
+/** Numeric series per bucket for fields the contract does not name exactly. */
+export function bucketNumericSeries<TBucket extends Record<string, unknown>>(
+  buckets: TBucket[],
+  exclude: string[] = ["start", "end"]
+): {
+  key: string;
+  label: string;
+  points: { t: string; value: number | null }[];
+}[] {
+  const keys = new Set<string>();
+  for (const b of buckets) {
+    for (const [k, v] of Object.entries(b)) {
+      if (!exclude.includes(k) && (typeof v === "number" || v === null)) {
+        keys.add(k);
+      }
+    }
+  }
+  return [...keys].sort().map((key) => ({
+    key,
+    label: key.replace(/_/g, " "),
+    points: buckets.map((b) => ({
+      t: String(b.start ?? ""),
+      value:
+        typeof b[key] === "number" && Number.isFinite(b[key])
+          ? (b[key] as number)
+          : null,
+    })),
+  }));
+}
+
+/** Compact duration for axis labels: 90s, 12m, 3.5h. */
+export function formatShortDuration(
+  v: number | null | undefined
+): string {
+  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  if (v < 60) return `${Math.round(v)}s`;
+  if (v < 3600) return `${Math.round(v / 60)}m`;
+  return `${(v / 3600).toFixed(v < 36000 ? 1 : 0)}h`;
+}
+
 // --- Formatting (UTC everywhere, explicit) ---
 
 function pad(n: number): string {

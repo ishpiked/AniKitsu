@@ -1,5 +1,10 @@
 import { computeTransitions, overallState } from "./derive";
 import type {
+  ActivityResponse,
+  AdminOverview,
+  AdminRoomsResponse,
+  AnalyticsBucket,
+  AnalyticsResponse,
   HttpCounter,
   HttpDurationStat,
   MonitoringHistoryResponse,
@@ -161,6 +166,153 @@ export function sanitizePublicStatus(json: MonitoringResponse): PublicStatus {
     history: shaped.history.map(sanitizeHistoryPoint),
     transitions: computeTransitions(json.history).slice(0, 100),
   };
+}
+
+/** Shared owner API credential for /api/admin/v1. Server-side only. */
+export function adminToken(): string {
+  return process.env.KITSU_OWNER_API_TOKEN ?? "";
+}
+
+/** Clamp an integer query value into [min, max], else fallback. */
+export function clampInt(
+  raw: unknown,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  const n =
+    typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+export function parseBucket(raw: unknown): AnalyticsBucket | null {
+  return raw === "day" || raw === "week" || raw === "month" ? raw : null;
+}
+
+export function parseEntity(raw: unknown): "all" | "user" | "group" | null {
+  return raw === "all" || raw === "user" || raw === "group" ? raw : null;
+}
+
+const TOKEN_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/;
+
+/** entity_id / event_type allowlist: Telegram IDs and dotted event names. */
+export function parseToken(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw === "") return null;
+  return TOKEN_PATTERN.test(raw) ? raw : null;
+}
+
+export interface AdminWindow {
+  from: string;
+  to: string;
+}
+
+/**
+ * Validate an RFC 3339 [from, to) window: ordered, max 366 days,
+ * normalized to UTC ISO strings.
+ */
+export function parseWindow(
+  fromRaw: unknown,
+  toRaw: unknown
+): AdminWindow | null {
+  if (typeof fromRaw !== "string" || typeof toRaw !== "string") return null;
+  const from = Date.parse(fromRaw);
+  const to = Date.parse(toRaw);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !(from < to)) {
+    return null;
+  }
+  if (to - from > 366 * 24 * 3600 * 1000) return null;
+  return {
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+  };
+}
+
+async function fetchAdmin<T>(path: string): Promise<T> {
+  const token = adminToken();
+  if (!token) {
+    throw new BackendError("Admin API token is not configured", 503);
+  }
+  const url = `${backendBaseUrl()}${path}`;
+  const signal = AbortSignal.timeout(BACKEND_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      cache: "no-store",
+      signal,
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (cause) {
+    throw new BackendError(
+      cause instanceof Error && cause.name === "TimeoutError"
+        ? `Backend request timed out: ${path}`
+        : `Backend unreachable: ${path}`,
+      0
+    );
+  }
+  if (!res.ok) {
+    throw new BackendError(
+      `Admin API responded ${res.status} for ${path}`,
+      res.status
+    );
+  }
+  return (await res.json()) as T;
+}
+
+export async function getAdminOverview(): Promise<AdminOverview> {
+  return fetchAdmin<AdminOverview>("/api/admin/v1/overview");
+}
+
+export async function getAdminAnalytics<TBucket>(
+  kind: "audience" | "watch-time" | "alerts",
+  window: AdminWindow,
+  bucket: AnalyticsBucket
+): Promise<AnalyticsResponse<TBucket>> {
+  const params = new URLSearchParams({
+    from: window.from,
+    to: window.to,
+    bucket,
+  });
+  return fetchAdmin<AnalyticsResponse<TBucket>>(
+    `/api/admin/v1/analytics/${kind}?${params}`
+  );
+}
+
+export async function getAdminRooms(
+  limit: number,
+  offset: number
+): Promise<AdminRoomsResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return fetchAdmin<AdminRoomsResponse>(`/api/admin/v1/rooms?${params}`);
+}
+
+export interface ActivityQuery {
+  entity: "all" | "user" | "group";
+  entityId: string | null;
+  eventType: string | null;
+  hours: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getAdminActivity(
+  query: ActivityQuery
+): Promise<ActivityResponse> {
+  const params = new URLSearchParams({
+    entity: query.entity,
+    hours: String(query.hours),
+    limit: String(query.limit),
+    offset: String(query.offset),
+  });
+  if (query.entityId) params.set("entity_id", query.entityId);
+  if (query.eventType) params.set("event_type", query.eventType);
+  return fetchAdmin<ActivityResponse>(`/api/admin/v1/activity?${params}`);
 }
 
 export class BackendError extends Error {

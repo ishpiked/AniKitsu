@@ -19,10 +19,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   ChartShell,
   KpiCard,
-  PanelEmpty,
   PanelError,
   TimeSeriesChart,
 } from "@/components/charts";
+import { AdminState } from "@/components/admin-state";
 import { StatusBadge } from "@/components/status";
 import {
   apiLatencySeries,
@@ -40,6 +40,7 @@ import {
   type RateSample,
 } from "@/lib/kitsu/derive";
 import type {
+  AdminOverview,
   MonitoringResponse,
   OverallState,
   PrometheusData,
@@ -63,6 +64,7 @@ const stateLabel: Record<OverallState, string> = {
 export interface Initial<T> {
   data: T | null;
   error: string | null;
+  code?: string | null;
 }
 
 function generatedAtMs(iso: string | undefined): number | null {
@@ -76,11 +78,13 @@ export default function OverviewView({
   initialMonitoring,
   initialMetrics,
   initialHealth,
+  initialAdmin,
 }: {
   initialHours: number;
   initialMonitoring: Initial<MonitoringResponse>;
   initialMetrics: Initial<PrometheusData>;
   initialHealth: Initial<{ status: string }>;
+  initialAdmin: Initial<AdminOverview>;
 }) {
   const fetchedAt = generatedAtMs(initialMonitoring.data?.generated_at);
   const { hours, setHours, paused, setPaused } =
@@ -102,6 +106,13 @@ export default function OverviewView({
     paused,
     initialData: initialHealth.data ?? undefined,
     initialError: initialHealth.error,
+    initialAt: fetchedAt,
+  });
+  const admin = useKitsu<AdminOverview>("api/admin/overview", {
+    paused,
+    initialData: initialAdmin.data ?? undefined,
+    initialError: initialAdmin.error,
+    initialCode: initialAdmin.code,
     initialAt: fetchedAt,
   });
 
@@ -132,9 +143,12 @@ export default function OverviewView({
     monitoring.refresh();
     metrics.refresh();
     health.refresh();
+    admin.refresh();
   };
   const loading = monitoring.loading && monitoring.data === null;
   const live = monitoring.error === null && metrics.error === null;
+  const db = admin.data?.database ?? null;
+  const adminRooms = admin.data?.rooms ?? null;
 
   const current = monitoring.data?.current ?? null;
   const verdict = current ? overallState(current) : null;
@@ -508,6 +522,45 @@ export default function OverviewView({
               </p>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Database</CardDescription>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                {db ? (
+                  <StatusBadge status={db.status} />
+                ) : (
+                  <span className="text-muted-foreground">Unknown</span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1 text-sm">
+              {admin.data ? (
+                <>
+                  <p>
+                    MongoDB reachability:{" "}
+                    <strong>{db?.status ?? "no data"}</strong>
+                    {db?.reason ? (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {db.reason}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-muted-foreground">
+                    A database signal here is reachability for the admin
+                    read path, not a full database health check.
+                  </p>
+                </>
+              ) : (
+                <AdminState
+                  code={admin.errorCode}
+                  error={admin.error}
+                  onRetry={admin.refresh}
+                />
+              )}
+            </CardContent>
+          </Card>
         </div>
       ) : null}
 
@@ -539,10 +592,38 @@ export default function OverviewView({
           }
           sub={`Backend generated this view ${monitoring.data ? formatAgo(monitoring.data.generated_at) : "—"}.`}
         />
-        <PanelEmpty
-          title="Watch Together rooms: no data source yet"
-          detail="Live room summaries need a safe backend endpoint (e.g. /api/admin/v1/rooms). The player WebSocket is not queried from here."
-        />
+        {adminRooms && adminRooms.active_count !== null ? (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Watch Together rooms</CardDescription>
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {adminRooms.active_count}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">
+                Active rooms on this backend process
+                {adminRooms.scope ? ` (${adminRooms.scope})` : ""}.{" "}
+                <Link href="/dev/rooms" className="font-medium underline">
+                  Open room detail
+                </Link>
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Watch Together rooms</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminState
+                code={admin.errorCode}
+                error={admin.error}
+                onRetry={admin.refresh}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

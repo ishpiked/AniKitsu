@@ -45,8 +45,9 @@ Read-only Phase 1 coverage built on the backend monitoring API:
   coverage counts, latency mean and p95, error bars, bot probe latency.
 - **Providers**: per-server health with stale flags, latency series with
   stale samples marked, and a state-change log.
-- **Audience**: current user and group totals with definitions and limits.
-- **Watch Together**: placeholder until a safe room-summary endpoint exists.
+- **Audience**: DAU/WAU/MAU buckets, joins and leaves, heartbeat watch-time splits, and alert audience from the protected admin analytics, plus eligibility totals kept distinct from activity counts.
+- **Watch Together**: live room summaries from the read-only admin rooms endpoint (process-local scope), with locked, presence, and playback state.
+- **Activity**: bounded, redacted event feed with entity, type, and time filters.
 - **Feature Catalog**: searchable catalog of every bot capability.
 
 Charts show UTC timestamps, keep gaps for missing samples, and never render

@@ -52,6 +52,7 @@ export const Trophy = SolarCupStarOutline;
 export const Users = SolarUsersGroupRoundedOutline;
 export const Zap = SolarBoltOutline;
 export const Calendar = SolarCalendarOutline;
+export const CalendarDays = SolarCalendarOutline;
 export const CalendarRange = SolarCalendarOutline;
 export const RefreshCw = SolarRefreshOutline;
 export const BookOpen = SolarNotebookOutline;

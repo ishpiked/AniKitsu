@@ -71,6 +71,125 @@ export interface MonitoringResponse {
   effective_interval_seconds?: number;
 }
 
+// --- Admin API (/api/admin/v1, bearer-protected, read-only) ---
+// Field shapes follow the backend contract; everything stays nullable
+// because the backend returns null for unreadable components.
+
+export type AnalyticsBucket = "day" | "week" | "month";
+
+export interface AdminDatabaseStatus {
+  status: string | null;
+  reason?: string | null;
+}
+
+export interface AdminAudienceTotals {
+  total: number | null;
+  active: number | null;
+  active_basis?: string | null;
+}
+
+export interface AdminOverview {
+  generated_at: string | null;
+  database: AdminDatabaseStatus | null;
+  audience: {
+    users: AdminAudienceTotals | null;
+    groups: AdminAudienceTotals | null;
+  } | null;
+  rooms: {
+    status: string | null;
+    active_count: number | null;
+    scope?: string | null;
+  } | null;
+  monitoring: {
+    latest_sample_at: string | null;
+    history_storage: string | null;
+  } | null;
+}
+
+export interface AudienceBucket {
+  start: string;
+  end: string;
+  active_users: number | null;
+  user_joins: number | null;
+  user_leaves: number | null;
+  group_joins: number | null;
+  group_leaves: number | null;
+}
+
+export interface WatchTimeBucket {
+  start: string;
+  end: string;
+  movie_seconds?: number | null;
+  series_seconds?: number | null;
+  [key: string]: unknown;
+}
+
+export interface AlertBucket {
+  start: string;
+  end: string;
+  [key: string]: unknown;
+}
+
+export interface AnalyticsResponse<TBucket> {
+  generated_at: string | null;
+  from: string | null;
+  to: string | null;
+  bucket: AnalyticsBucket | string;
+  timezone?: string | null;
+  definitions?: Record<string, unknown> | null;
+  coverage_start?: string | null;
+  buckets: TBucket[];
+}
+
+export type AudienceAnalytics = AnalyticsResponse<AudienceBucket>;
+export type WatchTimeAnalytics = AnalyticsResponse<WatchTimeBucket>;
+export type AlertAnalytics = AnalyticsResponse<AlertBucket>;
+
+export interface AdminRoom {
+  room_id: string;
+  origin: {
+    type: string | null;
+    moderation_ref?: string | null;
+  } | null;
+  title: {
+    media_type: string | null;
+    name: string | null;
+    season: number | null;
+    episode: number | null;
+  } | null;
+  participant_count: number | null;
+  host_present: boolean | null;
+  cohost_present: boolean | null;
+  locked: boolean | null;
+  playback: {
+    state: string | null;
+    position_seconds: number | null;
+    idle_expires_at: string | null;
+  } | null;
+}
+
+export interface AdminRoomsResponse {
+  rooms: AdminRoom[];
+  total?: number | null;
+  limit?: number | null;
+  offset?: number | null;
+  scope?: string | null;
+  generated_at?: string | null;
+}
+
+export interface ActivityItem {
+  entity: string;
+  event_type: string;
+  timestamp: string;
+}
+
+export interface ActivityResponse {
+  items: ActivityItem[];
+  total?: number | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+
 // --- Public (unauthenticated) status surface ---
 // Deliberately narrow: no audience totals, no error/sample internals.
 
