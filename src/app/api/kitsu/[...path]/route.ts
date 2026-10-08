@@ -150,7 +150,9 @@ function watchSecondsField(
 function profilePayload(
   json: unknown,
   userId: number,
-  photoUrl: string | undefined
+  photoUrl: string | undefined,
+  savedHistory: PersonalProfile["saved_history"],
+  activityLast90Days: number
 ): PersonalProfile | null {
   const payload = record(json);
   const user = record(payload?.user);
@@ -180,7 +182,7 @@ function profilePayload(
   const seriesSeconds = watchSecondsField(user, "watch_sec_series");
 
   const recentWatches = payload.recent_watches
-    .slice(0, 50)
+    .slice(0, 100)
     .flatMap((entry) => {
       const watch = record(entry);
       const title = watch ? stringField(watch, "title") : null;
@@ -202,7 +204,7 @@ function profilePayload(
     });
 
   const recentActivity = payload.recent_activity
-    .slice(0, 50)
+    .slice(0, 100)
     .flatMap((entry) => {
       const activity = record(entry);
       const eventType = activity ? stringField(activity, "event_type") : null;
@@ -215,12 +217,14 @@ function profilePayload(
     user: {
       user_id: userId,
       photo_url: safeHttpsUrl(photoUrl ?? null),
-      first_name: stringField(user, "first_name"),
+      first_name:
+        stringField(user, "first_name") ?? stringField(user, "name"),
       last_name: stringField(user, "last_name"),
       username: stringField(user, "username"),
       first_seen: stringField(user, "first_seen"),
       last_active: stringField(user, "last_active"),
       is_active: nullableBooleanField(user, "is_active"),
+      banned: nullableBooleanField(user, "banned"),
       is_donor: nullableBooleanField(user, "is_donor"),
       donated_stars: countField(user, "donated_stars"),
       alerts_on: nullableBooleanField(user, "alerts_on"),
@@ -238,9 +242,26 @@ function profilePayload(
           ? movieSeconds + seriesSeconds
           : null,
     },
+    saved_history: savedHistory,
+    activity_last_90_days: activityLast90Days,
     recent_watches: recentWatches,
     recent_activity: recentActivity,
   };
+}
+
+async function fetchOwnerEndpoint(
+  baseUrl: string,
+  token: string,
+  path: string
+): Promise<Response> {
+  return fetch(`${baseUrl}${path}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 /** Resolve a profile from its signed-in user ID, never a browser-supplied ID. */
@@ -287,7 +308,10 @@ async function proxyPersonalProfile(
 
   if (res.status === 404) {
     return NextResponse.json(
-      { error: "No Kitsu profile was found for this account." },
+      {
+        error:
+          "No Kitsu account record was found. Start the AniKitsuBot once, then reload your profile.",
+      },
       {
         status: 404,
         headers: { "Cache-Control": "private, no-store" },
@@ -305,17 +329,109 @@ async function proxyPersonalProfile(
     return profileError(`Backend responded ${res.status}.`, "upstream", 502);
   }
 
-  let json: unknown;
+  const watchHistoryQuery = (mediaType?: "movie" | "series") => {
+    const query = new URLSearchParams({
+      user_id: String(userId),
+      limit: "1",
+      offset: "0",
+    });
+    if (mediaType) query.set("media_type", mediaType);
+    return `/api/owner/watch-history?${query}`;
+  };
+  const activityQuery = new URLSearchParams({
+    entity: "user",
+    entity_id: String(userId),
+    hours: "2160",
+    limit: "1",
+    offset: "0",
+  });
+
+  let statsResponses: Response[];
   try {
-    json = await res.json();
+    statsResponses = await Promise.all([
+      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery()),
+      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery("movie")),
+      fetchOwnerEndpoint(baseUrl, token, watchHistoryQuery("series")),
+      fetchOwnerEndpoint(
+        baseUrl,
+        token,
+        `/api/owner/activity?${activityQuery}`
+      ),
+    ]);
   } catch {
+    return profileError("Backend unreachable.", "unreachable", 502);
+  }
+
+  if (
+    statsResponses.some(
+      (response) => response.status === 401 || response.status === 403
+    )
+  ) {
     return profileError(
-      "Backend returned invalid profile data.",
+      "Backend refused the owner credential. Check KITSU_OWNER_API_TOKEN.",
+      "forbidden",
+      502
+    );
+  }
+  const failedStats = statsResponses.find((response) => !response.ok);
+  if (failedStats) {
+    return profileError(
+      `Backend responded ${failedStats.status} while loading personal statistics.`,
       "upstream",
       502
     );
   }
-  const profile = profilePayload(json, userId, photoUrl);
+
+  let json: unknown;
+  let stats: unknown[];
+  try {
+    [json, ...stats] = await Promise.all([
+      res.json(),
+      ...statsResponses.map((response) => response.json()),
+    ]);
+  } catch {
+    return profileError(
+      "Backend returned invalid personal profile data.",
+      "upstream",
+      502
+    );
+  }
+  const [historyPayload, movieHistoryPayload, seriesHistoryPayload, activityPayload] =
+    stats.map(record);
+  const totalSaved = historyPayload ? countField(historyPayload, "total") : null;
+  const savedMovies = movieHistoryPayload
+    ? countField(movieHistoryPayload, "total")
+    : null;
+  const savedSeries = seriesHistoryPayload
+    ? countField(seriesHistoryPayload, "total")
+    : null;
+  const activityLast90Days = activityPayload
+    ? countField(activityPayload, "total")
+    : null;
+  if (
+    totalSaved === null ||
+    savedMovies === null ||
+    savedSeries === null ||
+    activityLast90Days === null
+  ) {
+    return profileError(
+      "Backend returned incomplete personal statistics.",
+      "upstream",
+      502
+    );
+  }
+
+  const profile = profilePayload(
+    json,
+    userId,
+    photoUrl,
+    {
+      total: totalSaved,
+      movies: savedMovies,
+      series_episodes: savedSeries,
+    },
+    activityLast90Days
+  );
   if (!profile) {
     return profileError(
       "Backend returned an unexpected profile.",

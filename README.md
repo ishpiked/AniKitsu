@@ -61,14 +61,16 @@ decimated server-side for transfer speed.
 ## Profile (`/profile`)
 
 Inside the Kitsu Telegram WebApp, the signed Telegram identity is used to sign
-in automatically and load that account's dashboard. In a regular browser, use
-the Telegram Login Widget. The profile includes the verified Telegram photo
-when supplied, account and alert status, supporter/star totals, watch-request
-counts, heartbeat-measured movie and series watch time, recent saved watches
-with resume progress, and recent activity. The server verifies Telegram's
-signed identity and uses the resulting account ID for the profile request; the
-browser cannot select another user's ID. Profile responses are private and
-uncached.
+in automatically before any profile data is requested. Reopening the Mini App
+re-verifies its current Telegram account before mounting the profile, so a
+leftover session from another Telegram account cannot display that account's
+stats. In a regular browser, use the Telegram Login Widget. The profile
+includes the verified Telegram photo when supplied, account and alert status,
+supporter/star totals, watch-request counts, saved movie and episode counts,
+90-day activity count, heartbeat-measured movie and series watch time, up to
+100 recent saved watches with resume progress, and up to 100 recent activity
+events. The backend queries are scoped to the verified Telegram user ID;
+profile responses are private and uncached.
 
 ## Configuration
 

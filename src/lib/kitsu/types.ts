@@ -311,6 +311,7 @@ export interface PersonalProfile {
     first_seen: string | null;
     last_active: string | null;
     is_active: boolean | null;
+    banned: boolean | null;
     is_donor: boolean | null;
     donated_stars: number | null;
     alerts_on: boolean | null;
@@ -325,6 +326,12 @@ export interface PersonalProfile {
     series: number | null;
     total: number | null;
   };
+  saved_history: {
+    total: number;
+    movies: number;
+    series_episodes: number;
+  };
+  activity_last_90_days: number;
   recent_watches: Array<{
     title: string;
     media_type: string;

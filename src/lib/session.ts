@@ -1,5 +1,5 @@
 // Edge-safe signed user sessions (WebCrypto only, no Node APIs).
-// Token format: "<user-id>.<exp-unix-seconds>.<base64url-hmac>".
+// Signed token optionally includes a base64url-encoded Telegram photo URL.
 
 export const SESSION_COOKIE = "kitsu_user";
 

@@ -55,6 +55,7 @@ function isPersonalProfile(value: unknown): value is PersonalProfile {
     !isNullableString(user.first_seen) ||
     !isNullableString(user.last_active) ||
     (user.is_active !== null && typeof user.is_active !== "boolean") ||
+    (user.banned !== null && typeof user.banned !== "boolean") ||
     (user.is_donor !== null && typeof user.is_donor !== "boolean") ||
     !isNullableSeconds(user.donated_stars) ||
     (user.alerts_on !== null && typeof user.alerts_on !== "boolean") ||
@@ -69,6 +70,15 @@ function isPersonalProfile(value: unknown): value is PersonalProfile {
     !isNullableSeconds(watchTime.movies) ||
     !isNullableSeconds(watchTime.series) ||
     !isNullableSeconds(watchTime.total) ||
+    !isRecord(value.saved_history) ||
+    !Number.isSafeInteger(value.saved_history.total) ||
+    typeof value.saved_history.total !== "number" ||
+    !Number.isSafeInteger(value.saved_history.movies) ||
+    typeof value.saved_history.movies !== "number" ||
+    !Number.isSafeInteger(value.saved_history.series_episodes) ||
+    typeof value.saved_history.series_episodes !== "number" ||
+    !Number.isSafeInteger(value.activity_last_90_days) ||
+    typeof value.activity_last_90_days !== "number" ||
     !Array.isArray(value.recent_watches) ||
     !Array.isArray(value.recent_activity)
   ) {
@@ -244,18 +254,24 @@ export default function ProfileView() {
         <KpiCard
           label="Account"
           value={
-            profile.user.is_active === null
-              ? "Unknown"
-              : profile.user.is_active
-                ? "Active"
-                : "Inactive"
+            profile.user.banned
+              ? "Restricted"
+              : profile.user.is_active === null
+                ? "Unknown"
+                : profile.user.is_active
+                  ? "Active"
+                  : "Inactive"
           }
         />
         <KpiCard
           label="Supporter"
-          value={profile.user.is_donor === null
-            ? "Unknown"
-            : profile.user.is_donor ? "Yes" : "No"}
+          value={
+            profile.user.is_donor === null
+              ? "Unknown"
+              : profile.user.is_donor
+                ? "Yes"
+                : "No"
+          }
         />
         <KpiCard
           label="Stars donated"
@@ -263,9 +279,37 @@ export default function ProfileView() {
         />
         <KpiCard
           label="Title alerts"
-          value={profile.user.alerts_on === null
-            ? "Not set"
-            : profile.user.alerts_on ? "On" : "Off"}
+          value={
+            profile.user.alerts_on === null
+              ? "Not set"
+              : profile.user.alerts_on
+                ? "On"
+                : "Off"
+          }
+        />
+      </section>
+
+      <section
+        aria-label="Saved watch history and activity"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <KpiCard
+          label="Saved watches"
+          value={profile.saved_history.total.toLocaleString()}
+          sub="Saved titles and episode resume points"
+        />
+        <KpiCard
+          label="Saved movies"
+          value={profile.saved_history.movies.toLocaleString()}
+        />
+        <KpiCard
+          label="Saved episodes"
+          value={profile.saved_history.series_episodes.toLocaleString()}
+        />
+        <KpiCard
+          label="Activity · 90 days"
+          value={profile.activity_last_90_days.toLocaleString()}
+          sub="Recorded account events"
         />
       </section>
 

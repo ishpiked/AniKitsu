@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getCurrentSession, logoutAction } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import ProfileView from "@/components/profile-view";
+import { ProfileAccess } from "@/components/profile-access";
 
 export const metadata: Metadata = {
   title: "Profile · Kitsu",
@@ -36,28 +28,10 @@ export default async function ProfilePage() {
         ) : null}
       </div>
 
-      {session ? (
-        <ProfileView />
-      ) : (
-        <Card className="max-w-xl">
-          <CardHeader>
-            <CardTitle>Sign in to see your stats</CardTitle>
-            <CardDescription>
-              Your Kitsu watch requests and recent activity are tied to your
-              Telegram account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-start gap-4">
-            <p className="text-sm text-muted-foreground">
-              Sign in with Telegram to see stats and activity associated only
-              with your account. Inside the Kitsu Mini App, sign-in is automatic.
-            </p>
-            <Button asChild>
-              <Link href="/login?next=%2Fprofile">Continue with Telegram</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <ProfileAccess
+        sessionUserId={session?.userId ?? null}
+        botUsername={process.env.KITSU_BOT_USERNAME || "AniKitsuBot"}
+      />
     </main>
   );
 }

@@ -72,7 +72,11 @@ export async function POST(request: Request) {
   await setSessionCookie(token, ttl);
 
   return NextResponse.json(
-    { authenticated: true, isOwner: isOwnerUser(identity.userId) },
+    {
+      authenticated: true,
+      userId: identity.userId,
+      isOwner: isOwnerUser(identity.userId),
+    },
     { headers: { "Cache-Control": "no-store" } }
   );
 }
