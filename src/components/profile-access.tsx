@@ -10,7 +10,7 @@ declare global {
   interface Window {
     Telegram?: {
       WebApp?: {
-        initData?: string;
+        initData: string;
         ready?: () => void;
       };
     };
