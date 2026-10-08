@@ -60,9 +60,9 @@ decimated server-side for transfer speed.
 
 ## Profile (`/profile`)
 
-Sign in with the Telegram Login Widget in a browser or inside the Kitsu
-Telegram WebApp. Inside the Mini App, the signed WebApp sign-in button is also
-available. After sign-in, users can see personal watch-request counts,
+Inside the Kitsu Telegram WebApp, the signed Telegram identity is used to sign
+in automatically and load that account's dashboard. In a regular browser, use
+the Telegram Login Widget. After sign-in, users can see personal watch-request counts,
 heartbeat-measured movie and series watch time, recent watch history, and
 recent activity. The server verifies Telegram's signed identity and uses the
 resulting account ID for the profile request; the browser cannot select

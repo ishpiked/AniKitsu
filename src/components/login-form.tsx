@@ -48,6 +48,7 @@ export function LoginForm({
   const [error, setError] = React.useState<string | null>(null);
   const [scriptFailed, setScriptFailed] = React.useState(false);
   const pendingRef = React.useRef(false);
+  const autoLoginAttempted = React.useRef("");
   const widgetContainer = React.useRef<HTMLDivElement>(null);
 
   const readTelegramData = React.useCallback(() => {
@@ -111,7 +112,7 @@ export function LoginForm({
   }, [nextPath, router]);
 
   React.useEffect(() => {
-    if (!botUsername || !widgetContainer.current) return;
+    if (!botUsername || initData || !widgetContainer.current) return;
 
     const handleTelegramAuth = (user: TelegramLoginWidgetUser) => {
       void signIn({ authData: user });
@@ -134,7 +135,13 @@ export function LoginForm({
       }
       widgetContainer.current?.replaceChildren();
     };
-  }, [botUsername, signIn]);
+  }, [botUsername, initData, signIn]);
+
+  React.useEffect(() => {
+    if (!initData || autoLoginAttempted.current === initData) return;
+    autoLoginAttempted.current = initData;
+    void signIn({ initData });
+  }, [initData, signIn]);
 
   return (
     <>
@@ -166,14 +173,18 @@ export function LoginForm({
               onClick={() => void signIn({ initData })}
               disabled={pending}
             >
-              {pending ? "Verifying…" : "Continue with Telegram"}
+              {pending
+                ? "Signing you in…"
+                : error
+                  ? "Retry Telegram sign-in"
+                  : "Continue with Telegram"}
             </Button>
           ) : !botUsername ? (
             <p className="text-sm text-muted-foreground">
               Telegram sign-in is not configured. Set KITSU_BOT_USERNAME to
               enable browser sign-in.
             </p>
-          )}
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -183,9 +194,11 @@ export function LoginForm({
             {scriptFailed
               ? "Telegram sign-in could not load. Check your connection and try again."
               : initData
-                ? botUsername
-                  ? "Choose the Login Widget or continue with your Telegram Mini App account."
-                  : "Telegram account detected. Continue to securely sign in."
+                ? pending
+                  ? "Using your Telegram account to open your personal Kitsu dashboard."
+                  : error
+                    ? "Automatic sign-in did not complete. Retry above."
+                    : "Telegram account detected. Signing in automatically."
                 : botUsername
                   ? "Sign in using the Telegram widget above."
                   : "You can also open Kitsu from inside Telegram to sign in."}
