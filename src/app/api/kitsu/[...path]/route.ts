@@ -504,6 +504,219 @@ async function proxyAdmin(upstreamPath: string): Promise<NextResponse> {
   return cached(serialized, false);
 }
 
+async function proxyOwnerData(upstreamPath: string): Promise<NextResponse> {
+  const token = adminToken();
+  if (!token) {
+    return adminError(
+      "Owner API is not configured: set KITSU_OWNER_API_TOKEN server-side.",
+      "not-configured",
+      503
+    );
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${backendBaseUrl()}${upstreamPath}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    return adminError("Backend unreachable.", "unreachable", 502);
+  }
+  if (response.status === 401 || response.status === 403) {
+    return adminError("Backend refused the owner credential.", "forbidden", 502);
+  }
+  if (response.status === 400 || response.status === 422) {
+    return adminError("Backend rejected the request parameters.", "bad-request", 502);
+  }
+  if (!response.ok) {
+    return adminError(`Backend responded ${response.status}.`, "upstream", 502);
+  }
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return adminError("Backend returned invalid owner data.", "upstream", 502);
+  }
+  return NextResponse.json(payload, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
+}
+
+function integerParam(
+  params: URLSearchParams,
+  name: string,
+  fallback: number,
+  min: number,
+  max: number
+): number | null {
+  const raw = params.get(name);
+  if (raw === null) return fallback;
+  if (!/^\d+$/.test(raw)) return null;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= min && value <= max
+    ? value
+    : null;
+}
+
+function signedId(raw: string | null): number | null {
+  if (raw === null || !/^-?\d+$/.test(raw)) return null;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+function ownerQuery(
+  params: URLSearchParams,
+  defaults: Record<string, number>,
+  bounds: Record<string, [number, number]>,
+  strings: Record<string, Set<string>> = {}
+): URLSearchParams | null {
+  const query = new URLSearchParams();
+  for (const [name, fallback] of Object.entries(defaults)) {
+    const value = integerParam(
+      params,
+      name,
+      fallback,
+      bounds[name][0],
+      bounds[name][1]
+    );
+    if (value === null) return null;
+    query.set(name, String(value));
+  }
+  for (const [name, allowed] of Object.entries(strings)) {
+    const value = params.get(name);
+    if (value !== null) {
+      if (!allowed.has(value)) return null;
+      query.set(name, value);
+    }
+  }
+  return query;
+}
+
+function ownerDataRoute(
+  key: string,
+  params: URLSearchParams
+): string | null | undefined {
+  if (key === "api/owner/overview") return "/api/owner/overview";
+
+  const users = ownerQuery(
+    params,
+    { limit: 50, offset: 0 },
+    { limit: [1, 200], offset: [0, 100_000] },
+    { status: new Set(["all", "active", "inactive", "banned", "donor"]) }
+  );
+  if (key === "api/owner/users") {
+    if (!users) return null;
+    const search = params.get("q");
+    if (search !== null && search.length > 100) return null;
+    if (search?.trim()) users.set("q", search.trim());
+    return `/api/owner/users?${users}`;
+  }
+  const userDetail = key.match(/^api\/owner\/users\/(\d{1,16})$/);
+  if (userDetail) {
+    const userId = signedId(userDetail[1]);
+    const query = ownerQuery(
+      params,
+      { activity_limit: 20, watch_limit: 20 },
+      { activity_limit: [1, 100], watch_limit: [1, 100] }
+    );
+    return userId !== null && userId > 0 && query
+      ? `/api/owner/users/${userId}?${query}`
+      : null;
+  }
+  if (key === "api/owner/watch-history") {
+    const query = ownerQuery(
+      params,
+      { limit: 50, offset: 0 },
+      { limit: [1, 200], offset: [0, 100_000] },
+      { media_type: new Set(["movie", "series"]) }
+    );
+    if (!query) return null;
+    const userId = params.get("user_id");
+    if (userId !== null) {
+      const parsed = signedId(userId);
+      if (parsed === null || parsed <= 0) return null;
+      query.set("user_id", String(parsed));
+    }
+    const search = params.get("q");
+    if (search !== null && search.length > 100) return null;
+    if (search?.trim()) query.set("q", search.trim());
+    return `/api/owner/watch-history?${query}`;
+  }
+  if (key === "api/owner/groups") {
+    const query = ownerQuery(
+      params,
+      { limit: 50, offset: 0 },
+      { limit: [1, 200], offset: [0, 100_000] },
+      { status: new Set(["all", "active", "removed"]) }
+    );
+    return query ? `/api/owner/groups?${query}` : null;
+  }
+  const groupDetail = key.match(/^api\/owner\/groups\/(-?\d{1,16})$/);
+  if (groupDetail) {
+    const chatId = signedId(groupDetail[1]);
+    const query = ownerQuery(
+      params,
+      { activity_limit: 30 },
+      { activity_limit: [1, 100] }
+    );
+    return chatId !== null && query
+      ? `/api/owner/groups/${chatId}?${query}`
+      : null;
+  }
+  if (key === "api/owner/leaderboards/watch-time") {
+    const query = ownerQuery(params, { limit: 50 }, { limit: [1, 100] });
+    return query ? `/api/owner/leaderboards/watch-time?${query}` : null;
+  }
+  if (key === "api/owner/schedules") {
+    const query = ownerQuery(
+      params,
+      { limit: 50, offset: 0 },
+      { limit: [1, 200], offset: [0, 100_000] },
+      {
+        status: new Set([
+          "all",
+          "pending",
+          "scheduled",
+          "completed",
+          "cancelled",
+        ]),
+      }
+    );
+    return query ? `/api/owner/schedules?${query}` : null;
+  }
+  if (key === "api/owner/activity") {
+    const query = ownerQuery(
+      params,
+      { hours: 168, limit: 50, offset: 0 },
+      { hours: [1, 2160], limit: [1, 200], offset: [0, 10_000] },
+      { entity: new Set(["all", "user", "group"]) }
+    );
+    if (!query) return null;
+    const entityId = params.get("entity_id");
+    if (entityId !== null) {
+      const parsed = signedId(entityId);
+      if (parsed === null) return null;
+      query.set("entity_id", String(parsed));
+    }
+    const eventType = params.get("event_type");
+    if (eventType !== null) {
+      const parsed = parseToken(eventType);
+      if (!parsed) return null;
+      query.set("event_type", parsed);
+    }
+    return `/api/owner/activity?${query}`;
+  }
+  if (key === "api/owner/analytics/usage") {
+    const query = ownerQuery(params, { days: 30 }, { days: [1, 90] });
+    return query ? `/api/owner/analytics/usage?${query}` : null;
+  }
+  return undefined;
+}
+
 export async function GET(
   request: Request,
   ctx: { params: Promise<{ path: string[] }> }
@@ -527,6 +740,13 @@ export async function GET(
   }
   if (!isOwnerUser(session.userId)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const ownerRoute = ownerDataRoute(key, params);
+  if (ownerRoute !== undefined) {
+    return ownerRoute
+      ? proxyOwnerData(ownerRoute)
+      : adminError("Invalid owner data request parameters.", "bad-request", 400);
   }
 
   // --- Admin namespace (bearer-protected, read-only) ---
@@ -638,4 +858,108 @@ export async function GET(
   const serialized = JSON.stringify(body);
   cacheSet(cacheKey, serialized);
   return cached(serialized, false);
+}
+
+export async function POST(
+  request: Request,
+  ctx: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await ctx.params;
+  if ((path ?? []).join("/") !== "api/owner/blog/images") {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  const session = await getRequestSession(request);
+  if (session === null) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!isOwnerUser(session.userId)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!/^image\/(jpeg|png|gif|webp)$/i.test(contentType)) {
+    return adminError(
+      "Upload a JPEG, PNG, GIF, or WebP image.",
+      "bad-request",
+      415
+    );
+  }
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return adminError("The image body is empty.", "bad-request", 400);
+  }
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    byteLength += value.byteLength;
+    if (byteLength > 5 * 1024 * 1024) {
+      await reader.cancel();
+      return adminError(
+        "Blog images must be between 1 byte and 5 MiB.",
+        "bad-request",
+        413
+      );
+    }
+    chunks.push(value);
+  }
+  if (byteLength === 0) {
+    return adminError(
+      "The image body is empty.",
+      "bad-request",
+      400
+    );
+  }
+  const imageData = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    imageData.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const token = adminToken();
+  if (!token) {
+    return adminError(
+      "Owner API is not configured: set KITSU_OWNER_API_TOKEN server-side.",
+      "not-configured",
+      503
+    );
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${backendBaseUrl()}/api/owner/blog/images`, {
+      method: "POST",
+      cache: "no-store",
+      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${token}`,
+        "content-type": contentType,
+      },
+      body: imageData,
+    });
+  } catch {
+    return adminError("Backend unreachable.", "unreachable", 502);
+  }
+  if (!response.ok) {
+    return adminError(
+      response.status === 413 || response.status === 415
+        ? "Backend rejected the image upload."
+        : `Backend responded ${response.status}.`,
+      response.status === 413 || response.status === 415
+        ? "bad-request"
+        : "upstream",
+      response.status === 413 || response.status === 415 ? 400 : 502
+    );
+  }
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return adminError("Backend returned an invalid image response.", "upstream", 502);
+  }
+  return NextResponse.json(payload, {
+    status: response.status,
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

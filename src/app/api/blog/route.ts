@@ -152,11 +152,19 @@ function parsePostInput(value: unknown) {
     title.length < 1 ||
     title.length > 160 ||
     content.length < 1 ||
-    content.length > 10000
+    content.length > 10000 ||
+    (body.imageId !== undefined &&
+      body.imageId !== null &&
+      (typeof body.imageId !== "string" ||
+        !/^[0-9a-f]{24}$/.test(body.imageId)))
   ) {
     return null;
   }
-  return { title, body: content };
+  return {
+    title,
+    body: content,
+    image_id: typeof body.imageId === "string" ? body.imageId : null,
+  };
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -207,7 +215,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 async function proxyOwnerWrite(
   path: string,
   method: "POST" | "PATCH" | "DELETE",
-  body?: { title: string; body: string }
+  body?: { title: string; body: string; image_id: string | null }
 ): Promise<NextResponse> {
   const token = adminToken();
   if (!token) {

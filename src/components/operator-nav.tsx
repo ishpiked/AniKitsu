@@ -19,6 +19,7 @@ const links = [
   { href: "/dev/audience", label: "Audience", icon: Users },
   { href: "/dev/rooms", label: "Watch Together", icon: MessagesSquare },
   { href: "/dev/activity", label: "Activity", icon: Activity },
+  { href: "/dev/data", label: "Backend data", icon: Users },
   { href: "/dev/catalog", label: "Feature Catalog", icon: BookOpen },
 ];
 

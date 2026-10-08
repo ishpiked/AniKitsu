@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Script from "next/script";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,9 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
   const [error, setError] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
+  const [imageId, setImageId] = React.useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = React.useState(false);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [canManage, setCanManage] = React.useState(false);
   const [identityReady, setIdentityReady] = React.useState(false);
@@ -161,6 +165,8 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
     setEditingId(null);
     setTitle("");
     setBody("");
+    setImageId(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const submitPost = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -177,6 +183,7 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
           initData: window.Telegram?.WebApp?.initData ?? "",
           title,
           body,
+          imageId,
         }),
       });
       let payload: unknown;
@@ -203,7 +210,47 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
     setEditingId(post.id);
     setTitle(post.title);
     setBody(post.body);
+    setImageId(post.imageId);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const uploadImage = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/kitsu/api/owner/blog/images", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        cache: "no-store",
+        body: file,
+      });
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        throw new Error(`Could not upload the image (${response.status}).`);
+      }
+      if (!response.ok) {
+        throw new Error(errorMessage(payload, "Could not upload the image."));
+      }
+      if (
+        typeof payload !== "object" ||
+        payload === null ||
+        !("image_id" in payload) ||
+        typeof payload.image_id !== "string" ||
+        !/^[0-9a-f]{24}$/.test(payload.image_id)
+      ) {
+        throw new Error("The backend returned an invalid image reference.");
+      }
+      setImageId(payload.image_id);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not upload the image."
+      );
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const deletePost = async (post: BlogPost) => {
@@ -261,8 +308,9 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
             </CardTitle>
             <CardDescription>
               Publish a note directly to the Kitsu blog. Telegram channel
-              announcements are added automatically. Posts are plain text;
-              dashboard posts are not sent back to Telegram.
+              announcements are added automatically, including supported
+              photos. Add an optional image to your post; dashboard posts are
+              not sent back to Telegram.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -288,10 +336,48 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
                   placeholder="Write your update here."
                 />
               </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Image (optional, up to 5 MiB)
+                <Input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  disabled={saving || uploadingImage}
+                  onChange={(event) =>
+                    void uploadImage(event.currentTarget.files?.[0])
+                  }
+                />
+              </label>
+              {imageId ? (
+                <div className="flex flex-col gap-2">
+                  <Image
+                    src={`/api/blog/image/${imageId}`}
+                    alt="Blog post preview"
+                    width={1200}
+                    height={675}
+                    unoptimized
+                    className="max-h-72 w-fit max-w-full rounded-md object-contain"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-fit"
+                    disabled={saving || uploadingImage}
+                    onClick={() => {
+                      setImageId(null);
+                      if (imageInputRef.current) imageInputRef.current.value = "";
+                    }}
+                  >
+                    Remove image
+                  </Button>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-2">
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving || uploadingImage}>
                   {saving
                     ? "Saving…"
+                    : uploadingImage
+                      ? "Uploading image…"
                     : editingId
                       ? "Save changes"
                       : "Publish post"}
@@ -367,6 +453,16 @@ export function BlogView({ isOwner }: { isOwner: boolean }) {
                 <CardTitle className="text-lg">{post.title}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
+                {post.imageId ? (
+                  <Image
+                    src={`/api/blog/image/${post.imageId}`}
+                    alt={post.title}
+                    width={1200}
+                    height={675}
+                    unoptimized
+                    className="max-h-[28rem] w-fit max-w-full rounded-md object-contain"
+                  />
+                ) : null}
                 {post.body ? (
                   <p className="whitespace-pre-wrap break-words text-sm leading-6">
                     {post.body}

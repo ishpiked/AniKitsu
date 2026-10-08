@@ -5,6 +5,7 @@ export interface BlogPost {
   source: BlogPostSource;
   title: string;
   body: string;
+  imageId: string | null;
   sourceUrl: string | null;
   publishedAt: string;
   updatedAt: string | null;
@@ -34,6 +35,14 @@ export function parseBlogPost(value: unknown): BlogPost | null {
   ) {
     return null;
   }
+  const imageId =
+    typeof post.image_id === "string" &&
+    /^[0-9a-f]{24}$/.test(post.image_id)
+      ? post.image_id
+      : null;
+  if (post.image_id !== undefined && post.image_id !== null && imageId === null) {
+    return null;
+  }
   let sourceUrl: string | null = null;
   if (typeof post.source_url === "string") {
     try {
@@ -55,6 +64,7 @@ export function parseBlogPost(value: unknown): BlogPost | null {
     source: post.source,
     title: post.title,
     body: post.body,
+    imageId,
     sourceUrl,
     publishedAt: post.published_at,
     updatedAt:
