@@ -22,7 +22,7 @@ import {
 } from "@/components/charts";
 import { AdminState } from "@/components/admin-state";
 import {
-  analyticsWindow,
+  alignAnalyticsWindow,
   bucketNumericSeries,
   findCoverageStart,
   formatNumber,
@@ -120,7 +120,12 @@ export default function AudienceView({
 
   const changeRange = (nextHours: number) => {
     setRangeHours(nextHours);
-    setWindowOverride(analyticsWindow(nextHours));
+    setWindowOverride(alignAnalyticsWindow(nextHours, bucket));
+  };
+
+  const changeBucket = (nextBucket: AnalyticsBucket) => {
+    setBucket(nextBucket);
+    setWindowOverride(alignAnalyticsWindow(rangeHours, nextBucket));
   };
 
   const metrics = useKitsu<PrometheusData>("metrics", {
@@ -218,7 +223,7 @@ export default function AudienceView({
     findCoverageStart(alerts.data?.definitions);
   const rangeMeta = `Buckets: ${bucket} (UTC) · window ${formatUtc(window.from)} → ${formatUtc(window.to)}`;
   const gapNote =
-    "Missing points mean unavailable coverage, not zero. Values before the coverage start must not be inferred.";
+    "Windows align to bucket boundaries and only complete buckets are returned. Missing points mean unavailable coverage, not zero.";
 
   const basis =
     admin.data?.audience?.users?.active_basis ?? "backend_eligibility_status";
@@ -237,7 +242,7 @@ export default function AudienceView({
         <div className="flex flex-wrap items-center gap-2">
           <OptionDropdown
             value={bucket}
-            onChange={(v) => setBucket(v as AnalyticsBucket)}
+            onChange={(v) => changeBucket(v as AnalyticsBucket)}
             label="Bucket size"
             icon={CalendarDays}
             className="w-44"

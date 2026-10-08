@@ -4,7 +4,7 @@ import {
   getAdminOverview,
   getPrometheus,
 } from "@/lib/kitsu/client";
-import { analyticsWindow } from "@/lib/kitsu/derive";
+import { alignAnalyticsWindow } from "@/lib/kitsu/derive";
 import type {
   AdminOverview,
   AlertAnalytics,
@@ -47,7 +47,7 @@ export default async function AudiencePage({
     : DEFAULT_RANGE_HOURS;
   const bucket: AnalyticsBucket =
     sp.bucket === "week" || sp.bucket === "month" ? sp.bucket : DEFAULT_BUCKET;
-  const window = analyticsWindow(hours);
+  const window = alignAnalyticsWindow(hours, bucket);
 
   const [metrics, admin, audience, watch, alerts] = await Promise.allSettled([
     getPrometheus(),

@@ -283,15 +283,44 @@ export function requestRates(prev: RateSample, next: RateSample): RequestRates {
   };
 }
 
-/** UTC [from, to) window ending now, for analytics queries. */
-export function analyticsWindow(
+function floorDay(d: Date): Date {
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+function floorWeekMonday(d: Date): Date {
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+function floorMonth(d: Date): Date {
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * UTC [from, to) analytics window with both ends on the bucket boundary
+ * (midnights, Mondays, or 1sts). The backend rejects unaligned windows
+ * and only returns complete buckets, so the current partial period is
+ * always excluded. Guarantees at least one bucket.
+ */
+export function alignAnalyticsWindow(
   hours: number,
+  bucket: "day" | "week" | "month",
   now = Date.now()
 ): { from: string; to: string } {
-  return {
-    from: new Date(now - hours * 3600 * 1000).toISOString(),
-    to: new Date(now).toISOString(),
-  };
+  const floor =
+    bucket === "day" ? floorDay : bucket === "week" ? floorWeekMonday : floorMonth;
+  const to = floor(new Date(now));
+  const from = floor(new Date(now - hours * 3600 * 1000));
+  if (from.getTime() >= to.getTime()) {
+    if (bucket === "day") from.setUTCDate(from.getUTCDate() - 1);
+    else if (bucket === "week") from.setUTCDate(from.getUTCDate() - 7);
+    else from.setUTCMonth(from.getUTCMonth() - 1);
+  }
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 /** Pull a coverage_start out of an analytics definitions block, if present. */

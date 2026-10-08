@@ -2,6 +2,7 @@ import { computeTransitions, overallState } from "./derive";
 import type {
   ActivityResponse,
   AdminOverview,
+  AdminRoom,
   AdminRoomsResponse,
   AnalyticsBucket,
   AnalyticsResponse,
@@ -289,7 +290,18 @@ export async function getAdminRooms(
     limit: String(limit),
     offset: String(offset),
   });
-  return fetchAdmin<AdminRoomsResponse>(`/api/admin/v1/rooms?${params}`);
+  const raw = await fetchAdmin<
+    AdminRoomsResponse | AdminRoom[] | { items?: unknown }
+  >(`/api/admin/v1/rooms?${params}`);
+  // Tolerate a bare-array or {items:[...]} envelope as well as {rooms:[...]}.
+  if (Array.isArray(raw)) return { rooms: raw };
+  const rooms = (raw as AdminRoomsResponse).rooms;
+  if (Array.isArray(rooms)) return { ...(raw as object), rooms };
+  const items = (raw as { items?: unknown }).items;
+  if (Array.isArray(items)) {
+    return { ...(raw as object), rooms: items as AdminRoom[] };
+  }
+  return { ...(raw as object), rooms: [] };
 }
 
 export interface ActivityQuery {
