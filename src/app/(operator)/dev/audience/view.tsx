@@ -187,33 +187,24 @@ export default function AudienceView({
   }));
 
   const watchBuckets = watch.data?.buckets ?? [];
-  const hasMovieSeries = watchBuckets.some(
-    (b) =>
-      typeof b.movie_seconds === "number" ||
-      typeof b.series_seconds === "number"
-  );
-  const watchSeries = hasMovieSeries
-    ? [
-        {
-          key: "movie_seconds",
-          label: "Movies",
-          points: watchBuckets.map((b) => ({
-            t: b.start,
-            value:
-              typeof b.movie_seconds === "number" ? b.movie_seconds : null,
-          })),
-        },
-        {
-          key: "series_seconds",
-          label: "Series",
-          points: watchBuckets.map((b) => ({
-            t: b.start,
-            value:
-              typeof b.series_seconds === "number" ? b.series_seconds : null,
-          })),
-        },
-      ]
-    : bucketNumericSeries(watchBuckets);
+  const watchSeries = [
+    {
+      key: "movie_seconds",
+      label: "Movies",
+      points: watchBuckets.map((b) => ({
+        t: b.start,
+        value: b.watch_time_seconds?.movie ?? null,
+      })),
+    },
+    {
+      key: "series_seconds",
+      label: "Series",
+      points: watchBuckets.map((b) => ({
+        t: b.start,
+        value: b.watch_time_seconds?.series ?? null,
+      })),
+    },
+  ];
 
   const alertSeries = bucketNumericSeries(alerts.data?.buckets ?? []);
 

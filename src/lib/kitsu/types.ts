@@ -119,9 +119,10 @@ export interface AudienceBucket {
 export interface WatchTimeBucket {
   start: string;
   end: string;
-  movie_seconds?: number | null;
-  series_seconds?: number | null;
-  [key: string]: unknown;
+  watch_time_seconds: {
+    movie: number | null;
+    series: number | null;
+  };
 }
 
 export interface AlertBucket {
