@@ -57,6 +57,56 @@ const highlights = [
   },
 ];
 
+const guideSections = [
+  {
+    title: "1. Start a private chat",
+    paragraphs: [
+      "Open @AniKitsuBot in Telegram and press Start, or send /start. The bot replies with its welcome screen and buttons. If you are new, use the bot in a private chat first; Telegram may not let a bot message you until you have opened it.",
+      "You can also send /help, /guide, or /status to see the bot's help and service information.",
+    ],
+  },
+  {
+    title: "2. Find a movie or series",
+    paragraphs: [
+      "Send /stream followed by a name, for example: /stream Spirited Away. /search followed by a name does the same kind of title search. /trending shows currently popular catalog picks.",
+      "Choose the matching title from the buttons. Check the year and title so you do not pick a remake by mistake. For a series, choose a season and then an episode. Episodes with a release date in the future, or with no confirmed release date, are not offered yet.",
+      "You can search from other chats too: type @AniKitsuBot, add a title, and choose a result. Sending that result adds its Watch and Share buttons to the chat.",
+    ],
+  },
+  {
+    title: "3. Open and control the player",
+    paragraphs: [
+      "Tap Watch or the player link on a result. Kitsu prepares a source and opens it in the web player or Telegram Mini App. Press Play if playback does not start automatically.",
+      "Use the player's controls to pause, seek, enter fullscreen, and choose subtitles when those options are available. Kitsu can try another source if one fails, but a title is not guaranteed to be available from every provider.",
+      "During playback, open the bot's controls for that active player to change your quality, subtitle track or on/off state, audio track, volume, or subtitle timing. These are personal viewing controls: they do not change another person's player or the shared Watch Together clock.",
+    ],
+  },
+  {
+    title: "4. Set your defaults and use your library",
+    paragraphs: [
+      "Send /settings to choose your default server, video quality, and subtitle preference. These are your own defaults and only apply when the selected source supports them; you can still change available controls for an active player.",
+      "Send /track to see your recorded watch history and resume points. Open /continue to pick up where you left off, /recommend for suggestions based on your history, and /mystats for your personal watch statistics.",
+      "Resume points and watch time are recorded from playback activity. They are useful estimates, not proof that a whole movie or episode was watched.",
+    ],
+  },
+  {
+    title: "5. Watch with friends",
+    paragraphs: [
+      "Start a supported title search, choose the title or episode, and use its Watch Together option to make a room. Send the room link to friends; they join with /join or the link. Use /party to check the room, /leave to leave it, and /end to close it when you are done.",
+      "The host can give a trusted friend control with /cohost or pass the host role with /transfer. Hosts and co-hosts can use /pause, /play, /seek, /skip, /autoplay, and /schedule where available. /kick removes a participant; /lock and /unlock control whether new people can join. Group administrators have host-level controls in their group.",
+      "Room participants, chat, and playback state are shown in the player. Inline searches create a personal room for the person who picked the result, even if the search started in a group. Some join/leave notices are delivered privately by Telegram.",
+    ],
+  },
+  {
+    title: "6. Alerts, help, and other buttons",
+    paragraphs: [
+      "Use /alerts to turn daily title alerts on or off. Alerts are opt-in; Kitsu does not enable them just because you opened the bot. /quiz starts a title quiz, /feedback sends a note to Kitsu support, /donate opens the optional Telegram Stars donation flow, and /ping checks the bot's connection to Telegram.",
+      "Use /share when you want a player link to share. Treat links like keys: who can open one depends on how it was created. For help at any time, use /help or return to this guide.",
+      "A title can be missing or fail to play when catalog metadata is incomplete, an episode has not aired, or an upstream provider is unavailable. Try another title spelling, check the release date, or try again later. If the problem continues, use /feedback and include what you tapped and what happened.",
+    ],
+  },
+];
+
 const COMMAND_GROUPS: CatalogGroup[] = [
   "discover",
   "library",
@@ -112,6 +162,37 @@ export default function BotPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{s.body}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section aria-label="Detailed beginner guide" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+            A step-by-step guide
+          </h2>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Follow these steps the first time you use Kitsu. You can come back
+            here whenever you get stuck.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {guideSections.map((section) => (
+            <Card key={section.title} className="h-full">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{section.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {section.paragraphs.map((paragraph) => (
+                  <p
+                    key={paragraph}
+                    className="text-sm leading-6 text-muted-foreground"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
               </CardContent>
             </Card>
           ))}

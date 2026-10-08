@@ -10,6 +10,7 @@ watch in the browser or inside Telegram, solo or in a synced room.
 |---|---|---|
 | Landing | `/` | Public |
 | Service status | `/status` | Public, unauthenticated sanitized snapshot |
+| Blog | `/blog` | Public reading; owner-only writing |
 | Bot guide | `/bot` | Public command reference |
 | Profile | `/profile` | Public page; private stats after Telegram sign-in |
 | Operator dashboard | `/dev` | Signed Telegram identity; bot owner only |
@@ -71,6 +72,17 @@ supporter/star totals, watch-request counts, saved movie and episode counts,
 100 recent saved watches with resume progress, and up to 100 recent activity
 events. The backend queries are scoped to the verified Telegram user ID;
 profile responses are private and uncached.
+
+## Blog (`/blog`)
+
+The blog combines posts from the configured Telegram updates channel with
+notes written in the dashboard by the bot owner. The backend bot must be an
+administrator in that channel, `UPDATES_CHANNEL_ID` must identify it, and
+MongoDB must be configured. New channel posts and edits are mirrored while the
+bot is receiving Telegram updates; older channel posts are not imported
+retroactively. Only the verified owner session can create, edit, or delete
+dashboard-written posts. Channel announcements link back to their Telegram
+message.
 
 ## Configuration
 

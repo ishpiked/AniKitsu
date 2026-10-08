@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Bot, House, Users } from "@/lib/icons";
+import { Activity, BookOpen, Bot, House, Users } from "@/lib/icons";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UtcClock } from "@/components/utc-clock";
@@ -12,6 +12,7 @@ import { cn } from "cn";
 const links = [
   { href: "/", label: "Home", icon: House, exact: true },
   { href: "/status", label: "Status", icon: Activity },
+  { href: "/blog", label: "Blog", icon: BookOpen },
   { href: "/bot", label: "Bot", icon: Bot },
   { href: "/profile", label: "Profile", icon: Users },
 ];
