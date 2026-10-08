@@ -111,7 +111,7 @@ export function LoginForm({
   }, [nextPath, router]);
 
   React.useEffect(() => {
-    if (!botUsername || initData || !widgetContainer.current) return;
+    if (!botUsername || !widgetContainer.current) return;
 
     const handleTelegramAuth = (user: TelegramLoginWidgetUser) => {
       void signIn({ authData: user });
@@ -134,7 +134,7 @@ export function LoginForm({
       }
       widgetContainer.current?.replaceChildren();
     };
-  }, [botUsername, initData, signIn]);
+  }, [botUsername, signIn]);
 
   return (
     <>
@@ -154,6 +154,12 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {botUsername ? (
+            <div
+              ref={widgetContainer}
+              className={`flex justify-center${pending ? " pointer-events-none opacity-60" : ""}`}
+            />
+          ) : null}
           {initData ? (
             <Button
               type="button"
@@ -162,12 +168,7 @@ export function LoginForm({
             >
               {pending ? "Verifying…" : "Continue with Telegram"}
             </Button>
-          ) : botUsername ? (
-            <div
-              ref={widgetContainer}
-              className={`flex justify-center${pending ? " pointer-events-none opacity-60" : ""}`}
-            />
-          ) : (
+          ) : !botUsername ? (
             <p className="text-sm text-muted-foreground">
               Telegram sign-in is not configured. Set KITSU_BOT_USERNAME to
               enable browser sign-in.
@@ -182,9 +183,11 @@ export function LoginForm({
             {scriptFailed
               ? "Telegram sign-in could not load. Check your connection and try again."
               : initData
-                ? "Telegram account detected. Continue to securely sign in."
+                ? botUsername
+                  ? "Choose the Login Widget or continue with your Telegram Mini App account."
+                  : "Telegram account detected. Continue to securely sign in."
                 : botUsername
-                  ? "Or open Kitsu in Telegram to sign in there."
+                  ? "Sign in using the Telegram widget above."
                   : "You can also open Kitsu from inside Telegram to sign in."}
           </p>
           {!initData ? (

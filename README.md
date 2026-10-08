@@ -60,12 +60,13 @@ decimated server-side for transfer speed.
 
 ## Profile (`/profile`)
 
-Sign in with the Telegram Login Widget in a browser or through the Kitsu
-Telegram WebApp to see personal watch-request counts, heartbeat-measured movie
-and series watch time, recent watch history, and recent activity. The server
-verifies Telegram's signed identity and uses the resulting account ID for the
-profile request; the browser cannot select another user's ID. Profile
-responses are private and uncached.
+Sign in with the Telegram Login Widget in a browser or inside the Kitsu
+Telegram WebApp. Inside the Mini App, the signed WebApp sign-in button is also
+available. After sign-in, users can see personal watch-request counts,
+heartbeat-measured movie and series watch time, recent watch history, and
+recent activity. The server verifies Telegram's signed identity and uses the
+resulting account ID for the profile request; the browser cannot select
+another user's ID. Profile responses are private and uncached.
 
 ## Configuration
 
