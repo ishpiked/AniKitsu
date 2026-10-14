@@ -11,8 +11,13 @@ const PAGE_SIZE = 20;
 function normalize(value: unknown): AdminRoomsResponse {
   if (Array.isArray(value)) return { rooms: value };
   if (value !== null && typeof value === "object") {
-    const rooms = (value as { rooms?: unknown }).rooms;
-    return { ...(value as object), rooms: Array.isArray(rooms) ? rooms : [] };
+    const record = value as { rooms?: unknown; items?: unknown };
+    const rooms = Array.isArray(record.rooms)
+      ? record.rooms
+      : Array.isArray(record.items)
+        ? record.items
+        : [];
+    return { ...(value as object), rooms };
   }
   return { rooms: [] };
 }

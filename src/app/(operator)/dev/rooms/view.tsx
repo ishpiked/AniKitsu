@@ -61,14 +61,25 @@ export default function RoomsView({
     initialAt: offset === initialOffset ? fetchedAt : null,
   });
 
-  // Tolerate a bare-array envelope as well as the object form.
+  // Tolerate a bare-array envelope as well as the object form. The
+  // rooms API proxy forwards the backend shape, which carries `items`.
   const raw = rooms.data as unknown;
-  const list = (
-    Array.isArray(raw) ? raw : ((raw as AdminRoomsResponse | null)?.rooms ?? [])
-  ) as AdminRoom[];
   const envelope = (
-    !Array.isArray(raw) ? (raw as AdminRoomsResponse | null) : null
+    !Array.isArray(raw)
+      ? (raw as (AdminRoomsResponse & { items?: unknown }) | null)
+      : null
   );
+  const roomsField = envelope?.rooms;
+  const itemsField = envelope?.items;
+  const list = (
+    Array.isArray(raw)
+      ? raw
+      : Array.isArray(roomsField)
+        ? roomsField
+        : Array.isArray(itemsField)
+          ? itemsField
+          : []
+  ) as AdminRoom[];
   const scope = envelope?.scope ?? "this_process";
   const total =
     typeof envelope?.total === "number" ? envelope.total : null;
