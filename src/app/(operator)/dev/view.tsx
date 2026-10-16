@@ -341,6 +341,10 @@ export default function OverviewView({
   const current = monitoring.data?.current ?? null;
   const verdict = current ? overallState(current) : null;
   const providers = current ? providerCounts(current.servers) : null;
+  const animeSources = Object.values(current?.anime_server?.providers ?? {});
+  const animeSourcesUp = animeSources.filter(
+    (provider) => provider.status === "up"
+  ).length;
   const meanMs = metrics.data
     ? meanLatencyMs(metrics.data.httpDurationSum, metrics.data.httpDurationCount)
     : null;
@@ -571,6 +575,21 @@ export default function OverviewView({
                       cadence; values reused between probes)
                     </span>
                   </p>
+                  <Separator className="my-1" />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">Dante · Anime streaming</p>
+                      <p className="text-muted-foreground">
+                        {formatMs(current.anime_server?.latency_ms)} playback
+                        latency · {animeSourcesUp}/{animeSources.length} sources
+                        up
+                      </p>
+                    </div>
+                    <StatusBadge
+                      status={current.anime_server?.status}
+                      stale={current.anime_server?.stale}
+                    />
+                  </div>
                   <p>
                     <Link
                       href="/dev/providers"
