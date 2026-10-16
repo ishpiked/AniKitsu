@@ -642,24 +642,37 @@ export default function OverviewView({
             <CardHeader className="pb-2">
               <CardDescription>Audience (MongoDB, current)</CardDescription>
               <CardTitle className="text-lg tabular-nums">
-                {formatNumber(metrics.data?.usersTotal)} users
+                {formatNumber(
+                  admin.data?.audience?.users?.total ??
+                    metrics.data?.usersTotal
+                )}{" "}
+                users
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1 text-sm">
               <p>
                 Active users:{" "}
                 <strong className="tabular-nums">
-                  {formatNumber(metrics.data?.usersActive)}
+                  {formatNumber(
+                    admin.data?.audience?.users?.active ??
+                      metrics.data?.usersActive
+                  )}
                 </strong>
               </p>
               <p>
                 Groups:{" "}
                 <strong className="tabular-nums">
-                  {formatNumber(metrics.data?.groupsTotal)}
+                  {formatNumber(
+                    admin.data?.audience?.groups?.total ??
+                      metrics.data?.groupsTotal
+                  )}
                 </strong>{" "}
                 total ·{" "}
                 <strong className="tabular-nums">
-                  {formatNumber(metrics.data?.groupsActive)}
+                  {formatNumber(
+                    admin.data?.audience?.groups?.active ??
+                      metrics.data?.groupsActive
+                  )}
                 </strong>{" "}
                 active
               </p>

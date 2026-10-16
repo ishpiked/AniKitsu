@@ -1,7 +1,5 @@
-import { getMonitoring } from "@/lib/kitsu/client";
-import { overallState, providerCounts } from "@/lib/kitsu/derive";
 import { siteUrl } from "@/lib/site";
-import LandingView, { type LandingStats } from "@/components/landing";
+import LandingView from "@/components/landing";
 
 export const metadata = {
   title: "Kitsu · Find it. Resolve it. Watch it together.",
@@ -9,32 +7,7 @@ export const metadata = {
     "Kitsu is a Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
 };
 
-export default async function Home() {
-  let stats: LandingStats | null = null;
-  try {
-    const m = await getMonitoring(24);
-    const counts = providerCounts(m.current.servers);
-    stats = {
-      providersUp: counts.up,
-      providersTotal: counts.total,
-      apiUptime: m.uptime.api.uptime_percent,
-      apiCoverage: m.uptime.api.coverage_percent,
-      apiLatency: m.current.api?.latency_ms ?? null,
-      apiP95: m.current.api?.p95_latency_ms ?? null,
-      botStatus: m.current.bot?.status ?? null,
-      botLatency:
-        m.current.bot?.status === "up"
-          ? (m.current.bot.latency_ms ?? null)
-          : null,
-      overall: overallState(m.current).state,
-      providers: Object.entries(m.current.servers ?? {})
-        .map(([name, s]) => ({ name, status: s?.status ?? null }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    };
-  } catch {
-    stats = null;
-  }
-
+export default function Home() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -50,7 +23,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingView stats={stats} />
+      <LandingView stats={null} />
     </>
   );
 }

@@ -33,6 +33,7 @@ import { cn } from "cn";
 export interface LandingStats {
   providersUp: number;
   providersTotal: number;
+  apiStatus: string | null;
   apiUptime: number | null;
   apiCoverage: number | null;
   apiLatency: number | null;
@@ -44,6 +45,62 @@ export interface LandingStats {
 }
 
 const BOT_URL = "https://t.me/AniKitsuBot";
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function nullableStatus(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function parseLandingStats(value: unknown): LandingStats | null {
+  const payload = objectRecord(value);
+  const api = objectRecord(payload?.api);
+  const apiUptime = objectRecord(api?.uptime);
+  const bot = objectRecord(payload?.bot);
+  const verdict = objectRecord(payload?.verdict);
+  const providers = payload?.providers;
+  const overall = verdict?.state;
+  if (
+    !api ||
+    !apiUptime ||
+    !bot ||
+    !Array.isArray(providers) ||
+    (overall !== "operational" &&
+      overall !== "degraded" &&
+      overall !== "down" &&
+      overall !== "unknown")
+  ) {
+    return null;
+  }
+
+  const parsedProviders = providers.flatMap((value) => {
+    const provider = objectRecord(value);
+    if (!provider || typeof provider.name !== "string") return [];
+    return [{ name: provider.name, status: nullableStatus(provider.status) }];
+  });
+  return {
+    providersUp: parsedProviders.filter((provider) => provider.status === "up")
+      .length,
+    providersTotal: parsedProviders.length,
+    apiStatus: nullableStatus(api.status),
+    apiUptime: nullableNumber(apiUptime.uptime_percent),
+    apiCoverage: nullableNumber(apiUptime.coverage_percent),
+    apiLatency: nullableNumber(api.latency_ms),
+    apiP95: nullableNumber(api.p95_latency_ms),
+    botStatus: nullableStatus(bot.status),
+    botLatency: nullableNumber(bot.latency_ms),
+    overall,
+    providers: parsedProviders.sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
 
 function Reveal({
   children,
@@ -411,10 +468,49 @@ const steps = [
 
 /* ---------------- page ---------------- */
 
-export default function LandingView({ stats }: { stats: LandingStats | null }) {
+export default function LandingView({
+  stats: initialStats,
+}: {
+  stats: LandingStats | null;
+}) {
+  const [liveStats, setLiveStats] = React.useState(initialStats);
+  const [statusLoading, setStatusLoading] = React.useState(initialStats === null);
   const [activeFeature, setActiveFeature] =
     React.useState<PreviewKey>("rooms");
 
+  React.useEffect(() => {
+    if (initialStats !== null) return;
+
+    const controller = new AbortController();
+    let active = true;
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+    void fetch("/api/public/status?hours=24", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Status request failed.");
+        return parseLandingStats(await response.json());
+      })
+      .then((nextStats) => {
+        if (active) setLiveStats(nextStats);
+      })
+      .catch(() => {
+        if (active) setLiveStats(null);
+      })
+      .finally(() => {
+        window.clearTimeout(timeout);
+        if (active) setStatusLoading(false);
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [initialStats]);
+
+  const stats = initialStats ?? liveStats;
   return (
     <div className="flex min-h-svh flex-col">
       {/* ---------- hero ---------- */}
@@ -508,14 +604,27 @@ export default function LandingView({ stats }: { stats: LandingStats | null }) {
                         label={stats.overall === "operational" ? "operational" : stats.overall}
                       />
                     ) : (
-                      <StatusPill status="unknown" label="unknown" />
+                      <StatusPill
+                        status="unknown"
+                        label={statusLoading ? "checking" : "unknown"}
+                      />
                     )}
                   </span>
                 </div>
                 <div className="flex flex-col divide-y text-sm">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-20 shrink-0 font-medium">API</span>
-                    <StatusPill status="up" label="up" showDot />
+                    <StatusPill
+                      status={
+                        stats?.apiStatus === "up"
+                          ? "up"
+                          : stats?.apiStatus === "down"
+                            ? "down"
+                            : "unknown"
+                      }
+                      label={stats?.apiStatus ?? (statusLoading ? "checking" : "unknown")}
+                      showDot
+                    />
                     <span className="ml-auto tabular-nums text-muted-foreground">
                       {stats
                         ? `${formatMs(stats.apiLatency)} · p95 ${formatMs(stats.apiP95)}`

@@ -37,6 +37,42 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
+async function fetchBlogPosts(
+  offset: number
+): Promise<{ posts: BlogPost[]; hasMore: boolean }> {
+  const response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
+    cache: "no-store",
+  });
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`Could not read the blog feed (${response.status}).`);
+  }
+  if (!response.ok) {
+    throw new Error(errorMessage(payload, "Could not load blog posts."));
+  }
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("items" in payload) ||
+    !Array.isArray(payload.items) ||
+    !("has_more" in payload) ||
+    typeof payload.has_more !== "boolean"
+  ) {
+    throw new Error("The blog feed returned an unexpected response.");
+  }
+  const posts: BlogPost[] = [];
+  for (const value of payload.items) {
+    const post = parseBlogPost(value);
+    if (post === null) {
+      throw new Error("The blog feed contains an invalid post.");
+    }
+    posts.push(post);
+  }
+  return { posts, hasMore: payload.has_more };
+}
+
 export function BlogView({ isOperator }: { isOperator: boolean }) {
   const [posts, setPosts] = React.useState<BlogPost[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -52,58 +88,52 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const canManage = isOperator;
 
-  const loadPosts = React.useCallback(async (offset = 0, append = false) => {
-    setLoading(!append);
-    setLoadingMore(append);
-    setError(null);
-    try {
-      const response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
-        cache: "no-store",
+  React.useEffect(() => {
+    let active = true;
+    void fetchBlogPosts(0)
+      .then(({ posts: nextPosts, hasMore: nextHasMore }) => {
+        if (!active) return;
+        setPosts(nextPosts);
+        setHasMore(nextHasMore);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setError(
+          reason instanceof Error ? reason.message : "Could not load blog posts."
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
-      let payload: unknown;
-      try {
-        payload = await response.json();
-      } catch {
-        throw new Error(`Could not read the blog feed (${response.status}).`);
-      }
-      if (!response.ok) {
-        throw new Error(errorMessage(payload, "Could not load blog posts."));
-      }
-      if (
-        typeof payload !== "object" ||
-        payload === null ||
-        !("items" in payload) ||
-        !Array.isArray(payload.items) ||
-        !("has_more" in payload) ||
-        typeof payload.has_more !== "boolean"
-      ) {
-        throw new Error("The blog feed returned an unexpected response.");
-      }
-      const parsedPosts: BlogPost[] = [];
-      for (const value of payload.items) {
-        const post = parseBlogPost(value);
-        if (post === null) {
-          throw new Error("The blog feed contains an invalid post.");
-        }
-        parsedPosts.push(post);
-      }
-      setPosts((current) =>
-        append ? [...current, ...parsedPosts] : parsedPosts
-      );
-      setHasMore(payload.has_more);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Could not load blog posts."
-      );
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  React.useEffect(() => {
-    void loadPosts();
-  }, [loadPosts]);
+  const loadPosts = React.useCallback(
+    async (offset = 0, append = false) => {
+      setLoading(!append);
+      setLoadingMore(append);
+      setError(null);
+      try {
+        const { posts: nextPosts, hasMore: nextHasMore } =
+          await fetchBlogPosts(offset);
+        setPosts((current) =>
+          append ? [...current, ...nextPosts] : nextPosts
+        );
+        setHasMore(nextHasMore);
+      } catch (reason) {
+        setError(
+          reason instanceof Error ? reason.message : "Could not load blog posts."
+        );
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    []
+  );
 
   const clearEditor = () => {
     setEditingId(null);
