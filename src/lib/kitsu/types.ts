@@ -23,6 +23,22 @@ export interface ProviderSample {
   error?: string | null;
 }
 
+export interface AnimeProviderSample {
+  status: string | null;
+  latency_ms: number | null;
+  stale: boolean | null;
+  error: string | null;
+}
+
+export interface AnimeServerSample {
+  name: "Dante";
+  status: string | null;
+  latency_ms: number | null;
+  stale: boolean | null;
+  probe_at: string | null;
+  providers: Record<string, AnimeProviderSample>;
+}
+
 export interface MonitoringSnapshot {
   timestamp: string;
   api: ApiSample | null;
@@ -30,6 +46,7 @@ export interface MonitoringSnapshot {
   servers: Record<string, ProviderSample>;
   server_probe_at: string | null;
   server_inventory_status: string | null;
+  anime_server?: AnimeServerSample | null;
   expires_at?: string | null;
 }
 
@@ -194,6 +211,11 @@ export interface PublicHistoryPoint {
     string,
     { status: string | null; stale: boolean | null; latency_ms: number | null }
   >;
+  anime_server?: {
+    status: string | null;
+    stale: boolean | null;
+    latency_ms: number | null;
+  } | null;
 }
 
 /** Uptime aggregates only — never embeds the raw `current` sample. */
@@ -225,6 +247,7 @@ export interface PublicStatus {
   };
   inventory_status: string | null;
   probe_at: string | null;
+  anime_server: AnimeServerSample | null;
   providers: PublicProviderStatus[];
   history: PublicHistoryPoint[];
   transitions: StateChange[];

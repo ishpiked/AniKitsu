@@ -127,7 +127,7 @@ export default function StatusView({
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>API</CardDescription>
@@ -222,7 +222,86 @@ export default function StatusView({
                 )}
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Dante · Anime streaming</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <StatusBadge
+                    status={data.anime_server?.status}
+                    stale={data.anime_server?.stale}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-1 text-sm">
+                <p>
+                  Playback probe:{" "}
+                  <strong className="tabular-nums">
+                    {formatMs(data.anime_server?.latency_ms ?? null)}
+                  </strong>
+                </p>
+                <p className="text-muted-foreground">
+                  Reference episode check across available anime sources.
+                </p>
+              </CardContent>
+            </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Dante anime sources</CardTitle>
+              <CardDescription>
+                A healthy source confirms its playlist and first media segment
+                responded. Playback may still vary by title.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="no-scrollbar overflow-x-auto">
+              <table className="w-full min-w-120 text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Source</th>
+                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <th className="py-2 pr-4 font-medium">Latency</th>
+                    <th className="py-2 font-medium">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(data.anime_server?.providers ?? {})
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([name, sample]) => (
+                      <tr key={name} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-medium">{name}</td>
+                        <td className="py-2 pr-4">
+                          <StatusBadge
+                            status={sample.status}
+                            stale={sample.stale}
+                          />
+                        </td>
+                        <td className="py-2 pr-4 tabular-nums">
+                          {formatMs(sample.latency_ms)}
+                        </td>
+                        <td className="py-2 text-muted-foreground">
+                          {sample.error ?? "playlist and segment responded"}
+                        </td>
+                      </tr>
+                    ))}
+                  {!data.anime_server?.providers ||
+                  Object.keys(data.anime_server.providers).length === 0 ? (
+                    <tr>
+                      <td
+                        className="py-3 text-muted-foreground"
+                        colSpan={4}
+                      >
+                        No anime playback probe has completed yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+              <p className="pt-3 text-xs text-muted-foreground">
+                Last checked {formatAgo(data.anime_server?.probe_at ?? null)}.
+              </p>
+            </CardContent>
+          </Card>
 
           <ChartShell
             title="API latency"

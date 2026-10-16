@@ -113,6 +113,7 @@ export default function ProvidersView({
     for (const s of servers.data?.servers ?? []) map.set(s.name, s);
     return map;
   }, [servers.data]);
+  const animeServer = monitoring.data?.current.anime_server;
 
   const rows = names
     .map((name) => {
@@ -200,6 +201,70 @@ export default function ProvidersView({
                 />
               </CardContent>
             ) : null}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span>Dante · Anime streaming</span>
+                <StatusBadge
+                  status={animeServer?.status}
+                  stale={animeServer?.stale}
+                />
+              </CardTitle>
+              <CardDescription>
+                Reference check: Attack on Titan episode 1 (sub). Each source
+                is marked up only after resolving a playlist and reading its
+                first media segment. Last checked{" "}
+                {formatAgo(animeServer?.probe_at ?? null)}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="no-scrollbar overflow-x-auto">
+              <table className="w-full min-w-120 text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Anime source</th>
+                    <th className="py-2 pr-4 font-medium">Playback probe</th>
+                    <th className="py-2 pr-4 font-medium">Latency</th>
+                    <th className="py-2 font-medium">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(animeServer?.providers ?? {})
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([name, sample]) => (
+                      <tr key={name} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-medium">{name}</td>
+                        <td className="py-2 pr-4">
+                          <StatusBadge
+                            status={sample.status}
+                            stale={sample.stale}
+                          />
+                        </td>
+                        <td className="py-2 pr-4 tabular-nums">
+                          {sample.latency_ms == null
+                            ? "—"
+                            : `${Math.round(sample.latency_ms)} ms`}
+                        </td>
+                        <td className="py-2 text-muted-foreground">
+                          {sample.error ?? "playlist and segment responded"}
+                        </td>
+                      </tr>
+                    ))}
+                  {!animeServer?.providers ||
+                  Object.keys(animeServer.providers).length === 0 ? (
+                    <tr>
+                      <td
+                        className="py-3 text-muted-foreground"
+                        colSpan={4}
+                      >
+                        No anime playback probe has completed yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </CardContent>
           </Card>
 
           <Card>

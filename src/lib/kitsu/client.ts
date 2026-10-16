@@ -3,6 +3,7 @@ import type {
   AdminOverview,
   AdminRoom,
   AdminRoomsResponse,
+  AnimeServerSample,
   AnalyticsBucket,
   AnalyticsResponse,
   HttpCounter,
@@ -105,6 +106,37 @@ function sanitizeHistoryPoint(s: MonitoringSnapshot): PublicHistoryPoint {
         s.bot?.status === "up" ? (s.bot.latency_ms ?? null) : null,
     },
     servers,
+    anime_server: s.anime_server
+      ? {
+          status: s.anime_server.status,
+          stale: s.anime_server.stale,
+          latency_ms: s.anime_server.latency_ms,
+        }
+      : null,
+  };
+}
+
+function sanitizeAnimeServer(
+  sample: AnimeServerSample | null | undefined
+): AnimeServerSample | null {
+  if (!sample) return null;
+  return {
+    name: "Dante",
+    status: sample.status ?? null,
+    latency_ms: sample.latency_ms ?? null,
+    stale: sample.stale ?? null,
+    probe_at: sample.probe_at ?? null,
+    providers: Object.fromEntries(
+      Object.entries(sample.providers ?? {}).map(([name, provider]) => [
+        name,
+        {
+          status: provider?.status ?? null,
+          latency_ms: provider?.latency_ms ?? null,
+          stale: provider?.stale ?? null,
+          error: provider?.error ?? null,
+        },
+      ])
+    ),
   };
 }
 
@@ -153,6 +185,7 @@ export function sanitizePublicStatus(json: MonitoringResponse): PublicStatus {
     },
     inventory_status: json.current.server_inventory_status ?? null,
     probe_at: json.current.server_probe_at ?? null,
+    anime_server: sanitizeAnimeServer(json.current.anime_server),
     providers: Object.entries(json.current.servers ?? {}).map(([name, s]) => ({
       name,
       status: s?.status ?? null,
