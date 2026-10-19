@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   MessagesSquare,
   Server,
+  Trophy,
   Users,
 } from "@/lib/icons";
 import { cn } from "cn";
@@ -18,6 +19,8 @@ const links = [
   { href: "/dev/health", label: "Service Health", icon: Activity },
   { href: "/dev/providers", label: "Providers", icon: Server },
   { href: "/dev/audience", label: "Audience", icon: Users },
+  { href: "/dev/users", label: "Users", icon: Users },
+  { href: "/dev/referrals", label: "Referrals", icon: Trophy },
   { href: "/dev/rooms", label: "Watch Together", icon: MessagesSquare },
   { href: "/blog", label: "Blog", icon: BookOpen },
   { href: "/dev/catalog", label: "Feature Catalog", icon: LayoutGrid },

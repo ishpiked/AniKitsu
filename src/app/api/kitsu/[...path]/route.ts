@@ -240,6 +240,26 @@ function ownerDataRoute(
     if (search?.trim()) users.set("q", search.trim());
     return `/api/owner/users?${users}`;
   }
+  if (key === "api/owner/referrals") {
+    const query = ownerQuery(
+      params,
+      { days: 30, limit: 20 },
+      { days: [1, 90], limit: [1, 100] }
+    );
+    return query ? `/api/owner/referrals?${query}` : null;
+  }
+  const userReferrals = key.match(/^api\/owner\/users\/(\d{1,16})\/referrals$/);
+  if (userReferrals) {
+    const userId = signedId(userReferrals[1]);
+    const query = ownerQuery(
+      params,
+      { limit: 20, offset: 0 },
+      { limit: [1, 100], offset: [0, 100_000] }
+    );
+    return userId !== null && userId > 0 && query
+      ? `/api/owner/users/${userId}/referrals?${query}`
+      : null;
+  }
   const userDetail = key.match(/^api\/owner\/users\/(\d{1,16})$/);
   if (userDetail) {
     const userId = signedId(userDetail[1]);
