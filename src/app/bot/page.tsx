@@ -23,8 +23,8 @@ export const metadata = {
 };
 
 const BOT_URL = "https://t.me/AniKitsuBot";
-const MINI_APP_URL = "https://t.me/AniKitsuBot/status";
-const WEB_APP_URL = "https://kitsubot.vercel.app/";
+const MINI_APP_URL = "https://t.me/AniKitsuBot/play";
+const WEB_APP_URL = "https://anikitsu.vercel.app/";
 
 const steps = [
   {

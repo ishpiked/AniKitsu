@@ -63,7 +63,18 @@ notes written in the dashboard by the bot owner. The backend bot must be an
 administrator in that channel, `UPDATES_CHANNEL_ID` must identify it, and
 MongoDB must be configured. New channel posts and edits are mirrored while the
 bot is receiving Telegram updates; older channel posts are not imported
-retroactively. Only a signed-in operator session can create, edit, or delete
+retroactively. Format channel announcements with the title on the first line
+and the post body on the following lines. For example:
+
+```text
+New player update
+
+Playback controls are now easier to use on mobile.
+```
+
+The bot uses the first line as the title (up to 160 characters), the remaining
+lines as the body, and can mirror an attached JPEG, PNG, GIF, or WebP photo up
+to 5 MiB. Only a signed-in operator session can create, edit, or delete
 dashboard-written posts. Channel announcements link back to their Telegram
 message.
 

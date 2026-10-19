@@ -39,7 +39,7 @@ function formatDate(value: string): string {
 
 async function fetchBlogPosts(
   offset: number
-): Promise<{ posts: BlogPost[]; hasMore: boolean }> {
+): Promise<{ posts: BlogPost[]; hasMore: boolean; nextOffset: number }> {
   let response: Response;
   try {
     response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
@@ -69,19 +69,25 @@ async function fetchBlogPosts(
     !("items" in payload) ||
     !Array.isArray(payload.items) ||
     !("has_more" in payload) ||
-    typeof payload.has_more !== "boolean"
+    typeof payload.has_more !== "boolean" ||
+    !("next_offset" in payload) ||
+    typeof payload.next_offset !== "number" ||
+    !Number.isSafeInteger(payload.next_offset) ||
+    payload.next_offset < offset ||
+    (payload.has_more && payload.next_offset === offset)
   ) {
     throw new Error("The blog feed returned an unexpected response.");
   }
   const posts: BlogPost[] = [];
   for (const value of payload.items) {
     const post = parseBlogPost(value);
-    if (post === null) {
-      throw new Error("The blog feed contains an invalid post.");
-    }
-    posts.push(post);
+    if (post !== null) posts.push(post);
   }
-  return { posts, hasMore: payload.has_more };
+  return {
+    posts,
+    hasMore: payload.has_more,
+    nextOffset: payload.next_offset,
+  };
 }
 
 export function BlogView({ isOperator }: { isOperator: boolean }) {
@@ -89,6 +95,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   const [loading, setLoading] = React.useState(true);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(false);
+  const [nextOffset, setNextOffset] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [feedError, setFeedError] = React.useState<string | null>(null);
@@ -106,11 +113,18 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
     let active = true;
     const revision = mutationRevision.current;
     void fetchBlogPosts(0)
-      .then(({ posts: nextPosts, hasMore: nextHasMore }) => {
-        if (!active || revision !== mutationRevision.current) return;
-        setPosts(nextPosts);
-        setHasMore(nextHasMore);
-      })
+      .then(
+        ({
+          posts: nextPosts,
+          hasMore: nextHasMore,
+          nextOffset: nextPageOffset,
+        }) => {
+          if (!active || revision !== mutationRevision.current) return;
+          setPosts(nextPosts);
+          setHasMore(nextHasMore);
+          setNextOffset(nextPageOffset);
+        }
+      )
       .catch((reason: unknown) => {
         if (!active || revision !== mutationRevision.current) return;
         setFeedError(
@@ -133,13 +147,18 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
       setLoadingMore(append);
       setFeedError(null);
       try {
-        const { posts: nextPosts, hasMore: nextHasMore } =
+        const {
+          posts: nextPosts,
+          hasMore: nextHasMore,
+          nextOffset: nextPageOffset,
+        } =
           await fetchBlogPosts(offset);
         if (revision !== mutationRevision.current) return;
         setPosts((current) =>
           append ? [...current, ...nextPosts] : nextPosts
         );
         setHasMore(nextHasMore);
+        setNextOffset(nextPageOffset);
       } catch (reason) {
         if (revision !== mutationRevision.current) return;
         setFeedError(
@@ -311,9 +330,11 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
               {editingId ? "Edit your post" : "Write a post"}
             </CardTitle>
             <CardDescription>
-              Publish a note directly to the Kitsu blog. Telegram channel
-              announcements are added automatically, including supported
-              photos. Add an optional image to your post; dashboard posts are
+              Publish a note directly to the Kitsu blog. Telegram
+              announcements are imported from the configured channel while
+              the bot is an admin. Put the title (up to 160 characters) on
+              line one and the body on following lines. Attach an optional
+              JPEG, PNG, GIF, or WebP photo up to 5 MiB. Dashboard posts are
               not sent back to Telegram.
             </CardDescription>
           </CardHeader>
@@ -542,7 +563,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
           <Button
             variant="outline"
             disabled={loadingMore}
-            onClick={() => void loadPosts(posts.length, true)}
+            onClick={() => void loadPosts(nextOffset, true)}
           >
             {loadingMore ? "Loading…" : "Load older posts"}
           </Button>

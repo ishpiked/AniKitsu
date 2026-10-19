@@ -16,6 +16,7 @@ export interface BlogFeed {
   total: number;
   limit: number;
   offset: number;
+  next_offset: number;
   has_more: boolean;
 }
 

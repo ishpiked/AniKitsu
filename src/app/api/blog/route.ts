@@ -78,17 +78,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   const items: BlogPost[] = [];
   for (const value of payload.items) {
     const post = parseBlogPost(value);
-    if (post === null) {
-      return apiError("The backend returned an invalid blog post.", 502);
-    }
-    items.push(post);
+    if (post !== null) items.push(post);
   }
+  const nextOffset = offset + payload.items.length;
   const feed: BlogFeed = {
     items,
     total: payload.total,
     limit,
     offset,
-    has_more: offset + items.length < payload.total,
+    next_offset: nextOffset,
+    has_more: nextOffset < payload.total,
   };
   return NextResponse.json(feed, {
     headers: { "Cache-Control": "no-store" },
