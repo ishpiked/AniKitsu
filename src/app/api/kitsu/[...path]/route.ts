@@ -442,9 +442,19 @@ export async function POST(
       503
     );
   }
+  let apiBase: string;
+  try {
+    apiBase = backendBaseUrl();
+  } catch {
+    return adminError(
+      "Owner API is not configured: set KITSU_API_URL on the web server.",
+      "not-configured",
+      503
+    );
+  }
   let response: Response;
   try {
-    response = await fetch(`${backendBaseUrl()}/api/owner/blog/images`, {
+    response = await fetch(`${apiBase}/api/owner/blog/images`, {
       method: "POST",
       cache: "no-store",
       signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
@@ -456,7 +466,11 @@ export async function POST(
       body: imageData,
     });
   } catch {
-    return adminError("Backend unreachable.", "unreachable", 502);
+    return adminError(
+      "The blog backend could not be reached. Check KITSU_API_URL and backend availability.",
+      "unreachable",
+      502
+    );
   }
   if (!response.ok) {
     return adminError(

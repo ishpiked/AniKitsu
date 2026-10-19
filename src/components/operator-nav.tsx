@@ -6,6 +6,7 @@ import {
   Activity,
   BookOpen,
   LayoutDashboard,
+  LayoutGrid,
   MessagesSquare,
   Server,
   Users,
@@ -18,7 +19,8 @@ const links = [
   { href: "/dev/providers", label: "Providers", icon: Server },
   { href: "/dev/audience", label: "Audience", icon: Users },
   { href: "/dev/rooms", label: "Watch Together", icon: MessagesSquare },
-  { href: "/dev/catalog", label: "Feature Catalog", icon: BookOpen },
+  { href: "/blog", label: "Blog", icon: BookOpen },
+  { href: "/dev/catalog", label: "Feature Catalog", icon: LayoutGrid },
 ];
 
 export function OperatorNav() {
@@ -26,7 +28,7 @@ export function OperatorNav() {
   return (
     <nav
       aria-label="Operator"
-      className="no-scrollbar flex gap-1 overflow-x-auto md:flex-col md:overflow-visible"
+      className="no-scrollbar flex snap-x gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0"
     >
       {links.map((link) => {
         const active = link.exact
@@ -39,10 +41,10 @@ export function OperatorNav() {
             href={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm",
+              "flex min-h-10 shrink-0 snap-start items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-accent font-medium text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                ? "bg-primary font-medium text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
             )}
           >
             <Icon className="size-4" aria-hidden />

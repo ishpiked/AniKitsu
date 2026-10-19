@@ -351,25 +351,47 @@ export default function OverviewView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm text-muted-foreground">
-            Live operator summary.{" "}
-            {monitoring.data
-              ? `Sampled ${formatAgo(monitoring.data.current.timestamp)} · generated ${formatUtc(monitoring.data.generated_at)}.`
-              : "Waiting for the first backend snapshot."}
-          </p>
-        </div>
-        <RefreshControls
-          hours={hours}
-          onHours={setHours}
-          paused={paused}
-          onPaused={setPaused}
-          onRefresh={refreshAll}
-          updatedAt={monitoring.updatedAt}
-          live={live}
+      <div className="relative isolate overflow-hidden rounded-3xl border bg-gradient-to-br from-violet-500/[0.10] via-card to-card p-5 shadow-sm sm:p-7">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 -z-10 size-80 rounded-full bg-fuchsia-400/10 blur-3xl"
         />
+        <div className="relative flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">
+              Kitsu · Operations
+            </p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Overview
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              {monitoring.data
+                ? `Sampled ${formatAgo(monitoring.data.current.timestamp)} · generated ${formatUtc(monitoring.data.generated_at)}.`
+                : "Waiting for the first backend snapshot."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border bg-background/70 px-3 text-xs font-medium text-muted-foreground">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-2 rounded-full",
+                  live ? "bg-emerald-500" : "bg-amber-500"
+                )}
+              />
+              {live ? "Live data" : "Partial data"}
+            </span>
+            <RefreshControls
+              hours={hours}
+              onHours={setHours}
+              paused={paused}
+              onPaused={setPaused}
+              onRefresh={refreshAll}
+              updatedAt={monitoring.updatedAt}
+              live={live}
+            />
+          </div>
+        </div>
       </div>
 
       {monitoring.sessionExpired || metrics.sessionExpired || joins.sessionExpired ? (
@@ -400,7 +422,7 @@ export default function OverviewView({
       ) : null}
 
       {verdict && current ? (
-        <Card className={cn("border-2", stateClass[verdict.state])}>
+        <Card className={cn("rounded-2xl border-2 shadow-sm", stateClass[verdict.state])}>
           <CardHeader className="pb-2">
             <CardDescription>Overall state</CardDescription>
             <CardTitle className="text-2xl">{stateLabel[verdict.state]}</CardTitle>

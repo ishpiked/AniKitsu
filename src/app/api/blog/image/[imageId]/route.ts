@@ -19,10 +19,20 @@ export async function GET(
     return NextResponse.json({ error: "Image not found." }, { status: 404 });
   }
 
+  let apiBase: string;
+  try {
+    apiBase = backendBaseUrl();
+  } catch {
+    return NextResponse.json(
+      { error: "The blog backend is not configured. Set KITSU_API_URL on the web server." },
+      { status: 503 }
+    );
+  }
+
   let response: Response;
   try {
     response = await fetch(
-      `${backendBaseUrl()}/api/blog/images/${imageId}`,
+      `${apiBase}/api/blog/images/${imageId}`,
       {
         cache: "no-store",
         signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
@@ -31,7 +41,7 @@ export async function GET(
     );
   } catch {
     return NextResponse.json(
-      { error: "Blog image storage is temporarily unavailable." },
+      { error: "The blog backend could not be reached. Check KITSU_API_URL and backend availability." },
       { status: 502 }
     );
   }

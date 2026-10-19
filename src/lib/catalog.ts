@@ -72,7 +72,9 @@ export const CATALOG: CatalogEntry[] = [
   { id: "feedback", command: "/feedback", title: "Send feedback", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: "Routed to Kitsu support." },
   { id: "donate", command: "/donate", title: "Donate with Telegram Stars", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: null },
   { id: "ping", command: "/ping", title: "Telegram API latency check", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: "Measures bot-to-Telegram round trip only." },
-  { id: "help", command: "/help · /start", title: "Welcome & help", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: null },
+  { id: "help", command: "/help · /start", title: "Welcome & command overview", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: null },
+  { id: "guide", command: "/guide", title: "Step-by-step streaming guide", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: "Opens the streaming steps and player troubleshooting." },
+  { id: "status", command: "/status", title: "Kitsu service information", group: "extras", where: "Telegram Mini App", who: "Any user", requires: null, limits: "Opens the status information page in the Telegram Mini App." },
   // --- Operator (Telegram owner commands; NOT web actions) ---
   { id: "admin", command: "/admin", title: "Owner dashboard", group: "operator", where: "Telegram · owner ID only", who: "Owner", requires: "OWNER_USER_ID match", limits: "Telegram-side control, not a web API." },
   { id: "op-status", command: "/stats · /metrics · /healthcheck · /servers · /sessions", title: "Service & provider inspection", group: "operator", where: "Telegram · owner ID only", who: "Owner", requires: "OWNER_USER_ID match", limits: "Read-only inspection; the web dashboard mirrors these." },

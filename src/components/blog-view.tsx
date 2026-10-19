@@ -40,9 +40,20 @@ function formatDate(value: string): string {
 async function fetchBlogPosts(
   offset: number
 ): Promise<{ posts: BlogPost[]; hasMore: boolean }> {
-  const response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (reason) {
+    const timedOut = reason instanceof DOMException && reason.name === "TimeoutError";
+    throw new Error(
+      timedOut
+        ? "The blog feed took too long to respond. Try again."
+        : "Could not reach the blog feed. Check the connection and try again."
+    );
+  }
   let payload: unknown;
   try {
     payload = await response.json();
@@ -80,25 +91,29 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   const [hasMore, setHasMore] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [feedError, setFeedError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [imageId, setImageId] = React.useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = React.useState(false);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const mutationRevision = React.useRef(0);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const canManage = isOperator;
 
   React.useEffect(() => {
     let active = true;
+    const revision = mutationRevision.current;
     void fetchBlogPosts(0)
       .then(({ posts: nextPosts, hasMore: nextHasMore }) => {
-        if (!active) return;
+        if (!active || revision !== mutationRevision.current) return;
         setPosts(nextPosts);
         setHasMore(nextHasMore);
       })
       .catch((reason: unknown) => {
-        if (!active) return;
-        setError(
+        if (!active || revision !== mutationRevision.current) return;
+        setFeedError(
           reason instanceof Error ? reason.message : "Could not load blog posts."
         );
       })
@@ -113,18 +128,21 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
 
   const loadPosts = React.useCallback(
     async (offset = 0, append = false) => {
+      const revision = mutationRevision.current;
       setLoading(!append);
       setLoadingMore(append);
-      setError(null);
+      setFeedError(null);
       try {
         const { posts: nextPosts, hasMore: nextHasMore } =
           await fetchBlogPosts(offset);
+        if (revision !== mutationRevision.current) return;
         setPosts((current) =>
           append ? [...current, ...nextPosts] : nextPosts
         );
         setHasMore(nextHasMore);
       } catch (reason) {
-        setError(
+        if (revision !== mutationRevision.current) return;
+        setFeedError(
           reason instanceof Error ? reason.message : "Could not load blog posts."
         );
       } finally {
@@ -147,13 +165,16 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    setFeedError(null);
+    setSuccess(null);
+    const currentEditId = editingId;
     try {
       const response = await fetch("/api/blog", {
-        method: editingId ? "PATCH" : "POST",
+        method: currentEditId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         body: JSON.stringify({
-          ...(editingId ? { postId: editingId } : {}),
+          ...(currentEditId ? { postId: currentEditId } : {}),
           title,
           body,
           imageId,
@@ -168,8 +189,23 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
       if (!response.ok) {
         throw new Error(errorMessage(payload, "Could not save the post."));
       }
+      const savedPost =
+        typeof payload === "object" && payload !== null && "post" in payload
+          ? parseBlogPost(payload.post)
+          : null;
+      if (!savedPost) {
+        throw new Error("The blog server did not confirm the saved post.");
+      }
+      mutationRevision.current += 1;
+      setLoading(false);
+      setLoadingMore(false);
+      setPosts((current) =>
+        currentEditId
+          ? current.map((post) => (post.id === savedPost.id ? savedPost : post))
+          : [savedPost, ...current.filter((post) => post.id !== savedPost.id)]
+      );
       clearEditor();
-      await loadPosts();
+      setSuccess(currentEditId ? "Your changes were saved." : "Your post is published.");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Could not save the post."
@@ -231,6 +267,8 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
       return;
     }
     setError(null);
+    setFeedError(null);
+    setSuccess(null);
     try {
       const response = await fetch("/api/blog", {
         method: "DELETE",
@@ -251,8 +289,12 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
       if (!response.ok) {
         throw new Error(errorMessage(payload, "Could not delete the post."));
       }
+      mutationRevision.current += 1;
+      setLoading(false);
+      setLoadingMore(false);
       if (editingId === post.id) clearEditor();
-      await loadPosts();
+      setPosts((current) => current.filter((item) => item.id !== post.id));
+      setSuccess("The post was deleted.");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Could not delete the post."
@@ -263,9 +305,9 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       {canManage ? (
-        <Card>
+        <Card className="rounded-3xl border-violet-500/15 bg-gradient-to-br from-card to-violet-500/[0.035] shadow-sm shadow-violet-950/[0.04]">
           <CardHeader>
-            <CardTitle className="text-base">
+            <CardTitle className="text-xl">
               {editingId ? "Edit your post" : "Write a post"}
             </CardTitle>
             <CardDescription>
@@ -284,6 +326,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
                   onChange={(event) => setTitle(event.target.value)}
                   maxLength={160}
                   required
+                  disabled={saving || uploadingImage}
                   placeholder="What would you like to share?"
                 />
               </label>
@@ -294,6 +337,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
                   onChange={(event) => setBody(event.target.value)}
                   maxLength={10000}
                   required
+                  disabled={saving || uploadingImage}
                   rows={7}
                   placeholder="Write your update here."
                 />
@@ -366,35 +410,63 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
           className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm"
         >
           {error}
+        </div>
+      ) : null}
+
+      {success ? (
+        <p
+          role="status"
+          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200"
+        >
+          {success}
+        </p>
+      ) : null}
+
+      {feedError ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="min-w-0 break-words">{feedError}</p>
           <Button
-            className="ml-3"
+            className="shrink-0"
             size="sm"
             variant="outline"
             onClick={() => void loadPosts()}
           >
-            Retry
+            Retry feed
           </Button>
         </div>
       ) : null}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          Loading Kitsu posts…
-        </p>
-      ) : posts.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center">
-            <p className="font-medium">No posts yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              New announcements from the Kitsu updates channel will appear
-              here.
-            </p>
+      {loading && posts.length === 0 ? (
+        <Card className="rounded-2xl">
+          <CardContent className="flex min-h-28 items-center justify-center text-sm text-muted-foreground" aria-live="polite">
+            Loading Kitsu posts…
           </CardContent>
         </Card>
+      ) : posts.length === 0 ? (
+        feedError ? null : (
+          <Card className="rounded-2xl border-dashed bg-card/70">
+            <CardContent className="py-12 text-center">
+              <p className="font-medium">No posts yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                New announcements from the Kitsu updates channel will appear
+                here.
+              </p>
+            </CardContent>
+          </Card>
+        )
       ) : (
-        <section aria-label="Kitsu blog posts" className="grid gap-4">
-          {posts.map((post) => (
-            <Card key={post.id}>
+        <>
+          {loading ? (
+            <p className="text-xs text-muted-foreground" role="status">
+              Refreshing the feed…
+            </p>
+          ) : null}
+          <section aria-label="Kitsu blog posts" className="grid gap-4">
+            {posts.map((post) => (
+              <Card key={post.id} className="rounded-2xl shadow-sm shadow-black/[0.025]">
               <CardHeader className="gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">
@@ -406,7 +478,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
                     {formatDate(post.publishedAt)}
                   </span>
                 </div>
-                <CardTitle className="text-lg">{post.title}</CardTitle>
+                <CardTitle className="text-xl leading-snug">{post.title}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 {post.imageId ? (
@@ -416,11 +488,11 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
                     width={1200}
                     height={675}
                     unoptimized
-                    className="max-h-[28rem] w-fit max-w-full rounded-md object-contain"
+                    className="max-h-[28rem] w-full rounded-xl bg-muted/40 object-contain"
                   />
                 ) : null}
                 {post.body ? (
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                  <p className="whitespace-pre-wrap break-words text-[0.9375rem] leading-7">
                     {post.body}
                   </p>
                 ) : (
@@ -460,9 +532,10 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
                   ) : null}
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </section>
+              </Card>
+            ))}
+          </section>
+        </>
       )}
       {!loading && hasMore ? (
         <div className="flex justify-center">

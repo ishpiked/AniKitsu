@@ -23,6 +23,8 @@ export const metadata = {
 };
 
 const BOT_URL = "https://t.me/AniKitsuBot";
+const MINI_APP_URL = "https://t.me/AniKitsuBot/status";
+const WEB_APP_URL = "https://kitsubot.vercel.app/";
 
 const steps = [
   {
@@ -62,7 +64,7 @@ const guideSections = [
     title: "1. Start a private chat",
     paragraphs: [
       "Open @AniKitsuBot in Telegram and press Start, or send /start. The bot replies with its welcome screen and buttons. If you are new, use the bot in a private chat first; Telegram may not let a bot message you until you have opened it.",
-      "You can also send /help, /guide, or /status to see the bot's help and service information.",
+      "Use /guide for these streaming steps, /help for the command overview, and /status for Kitsu service information and the Mini App link.",
     ],
   },
   {
@@ -76,7 +78,7 @@ const guideSections = [
   {
     title: "3. Open and control the player",
     paragraphs: [
-      "Tap Watch or the player link on a result. Kitsu prepares a source and opens it in the web player or Telegram Mini App. Press Play if playback does not start automatically.",
+      "Tap Prepare stream on a title or episode, wait for Kitsu to finish resolving a source, then tap Watch on the ready card. It opens the player in the web app or Telegram Mini App. Press Play if playback does not start automatically.",
       "Use the player's controls to pause, seek, enter fullscreen, and choose subtitles when those options are available. Kitsu can try another source if one fails, but a title is not guaranteed to be available from every provider.",
       "During playback, open the bot's controls for that active player to change your quality, subtitle track or on/off state, audio track, volume, or subtitle timing. These are personal viewing controls: they do not change another person's player or the shared Watch Together clock.",
     ],
@@ -134,8 +136,18 @@ export default function BotPage() {
         <div className="flex flex-wrap gap-3">
           <Button size="lg" asChild>
             <a href={BOT_URL} target="_blank" rel="noreferrer">
-              Open in Telegram
+              Chat with the bot
               <ArrowRight className="size-4" />
+            </a>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <a href={MINI_APP_URL} target="_blank" rel="noreferrer">
+              Open Mini App
+            </a>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <a href={WEB_APP_URL} target="_blank" rel="noreferrer">
+              Open web app
             </a>
           </Button>
           <Button size="lg" variant="outline" asChild>

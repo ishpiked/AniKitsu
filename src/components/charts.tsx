@@ -46,7 +46,7 @@ export function ChartShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="rounded-2xl shadow-sm shadow-black/[0.025]">
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
@@ -70,10 +70,12 @@ export function KpiCard({
   sub?: string;
 }) {
   return (
-    <Card>
+    <Card className="rounded-2xl border-violet-500/10 bg-gradient-to-br from-card to-violet-500/[0.025] shadow-sm shadow-black/[0.025]">
       <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-2xl font-semibold tabular-nums">
+        <CardDescription className="text-xs font-medium uppercase tracking-[0.1em]">
+          {label}
+        </CardDescription>
+        <CardTitle className="text-3xl font-semibold tabular-nums">
           {value}
         </CardTitle>
       </CardHeader>

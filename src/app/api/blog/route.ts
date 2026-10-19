@@ -30,15 +30,22 @@ export async function GET(request: Request): Promise<NextResponse> {
     offset: String(offset),
   });
 
+  let apiBase: string;
+  try {
+    apiBase = backendBaseUrl();
+  } catch {
+    return apiError("The blog backend is not configured. Set KITSU_API_URL on the web server.", 503);
+  }
+
   let response: Response;
   try {
-    response = await fetch(`${backendBaseUrl()}/api/blog/posts?${query}`, {
+    response = await fetch(`${apiBase}/api/blog/posts?${query}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
       headers: { accept: "application/json" },
     });
   } catch {
-    return apiError("The blog feed is temporarily unavailable.", 502);
+    return apiError("The blog backend could not be reached. Check KITSU_API_URL and backend availability.", 502);
   }
   if (!response.ok) {
     return apiError(
@@ -142,9 +149,9 @@ function parsePostInput(value: unknown) {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const payload = await readBody(request);
   const denied = await requireOperatorSession(request);
   if (denied) return denied;
+  const payload = await readBody(request);
   const input = parsePostInput(payload);
   if (!input) {
     return apiError(
@@ -156,9 +163,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function PATCH(request: Request): Promise<NextResponse> {
-  const body = record(await readBody(request));
   const denied = await requireOperatorSession(request);
   if (denied) return denied;
+  const body = record(await readBody(request));
   const postId = typeof body?.postId === "string" ? body.postId : "";
   const input = parsePostInput(body);
   if (!/^[0-9a-f]{32}$/.test(postId) || !input) {
@@ -172,9 +179,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 }
 
 export async function DELETE(request: Request): Promise<NextResponse> {
-  const body = record(await readBody(request));
   const denied = await requireOperatorSession(request);
   if (denied) return denied;
+  const body = record(await readBody(request));
   const postId = typeof body?.postId === "string" ? body.postId : "";
   if (!/^[0-9a-f]{32}$/.test(postId)) {
     return apiError("A valid owner post is required.", 400);
@@ -192,9 +199,16 @@ async function proxyOwnerWrite(
     return apiError("Blog management is not configured on the server.", 503);
   }
 
+  let apiBase: string;
+  try {
+    apiBase = backendBaseUrl();
+  } catch {
+    return apiError("The blog backend is not configured. Set KITSU_API_URL on the web server.", 503);
+  }
+
   let response: Response;
   try {
-    response = await fetch(`${backendBaseUrl()}${path}`, {
+    response = await fetch(`${apiBase}${path}`, {
       method,
       cache: "no-store",
       signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
@@ -206,7 +220,10 @@ async function proxyOwnerWrite(
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch {
-    return apiError("The blog backend is temporarily unreachable.", 502);
+    return apiError(
+      "The blog backend could not be reached. Check KITSU_API_URL and backend availability.",
+      502
+    );
   }
   if (!response.ok) {
     if (response.status === 404) return apiError("Blog post not found.", 404);
@@ -214,6 +231,12 @@ async function proxyOwnerWrite(
       return apiError(
         "The backend refused the blog management credential.",
         502
+      );
+    }
+    if (response.status === 503) {
+      return apiError(
+        "Blog publishing is unavailable. Check the backend owner token and MongoDB storage configuration.",
+        503
       );
     }
     if (response.status === 422) {
