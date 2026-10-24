@@ -45,10 +45,28 @@ at `/profile/dashboard`. Telegram signs the login data, the backend verifies it
 with the existing bot token, and Kitsu stores the verified identity in a signed
 HTTP only session cookie. Owner pages and data are checked on the server.
 
-Dashboard reads and blog operations run from Kitsu server code directly to the
-configured FastAPI backend. The browser does not need a separate Kitsu JSON
-proxy for profile data or blog posts. The backend address must be stable.
+Dashboard and blog data requests go through Kitsu server routes to the
+configured FastAPI backend. The browser talks to the same-origin Kitsu routes;
+owner credentials remain server-side. The backend address must be stable.
 Temporary tunnel addresses can expire and cause DNS errors.
+
+## Deployment links and data flow
+
+The player and dashboard are separate Vercel deployments with separate
+Telegram Mini App links:
+
+- Player: `https://anikitsu.vercel.app/` and `https://t.me/AniKitsuBot/play`.
+  The `Frontend` deployment calls the FastAPI backend from the browser using
+  `NEXT_PUBLIC_BACKEND_URL`.
+- Dashboard: `https://kitsubot.vercel.app/` and
+  `https://t.me/AniKitsuBot/status`. This `Kitsu` deployment uses
+  `KITSU_API_URL` in its server routes to fetch dashboard and blog data from
+  the same FastAPI backend. Owner credentials stay on the server.
+
+Set `NEXT_PUBLIC_SITE_URL=https://kitsubot.vercel.app` on the dashboard
+deployment. Set `NEXT_PUBLIC_BACKEND_URL` on the player and `KITSU_API_URL` on
+the dashboard to the same stable backend API origin. Do not point either
+deployment at the other Vercel app as its API.
 
 - **Overview**: overall Operational / Degraded / Down / Unknown verdict with
   reasons, plus API, bot, provider, traffic, audience, and history cards.
@@ -96,6 +114,7 @@ exposed to the browser or the public status page.
 | `KITSU_API_URL` | Stable base URL of the FastAPI backend |
 | `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
 | `KITSU_TELEGRAM_BOT_USERNAME` | Telegram bot username linked to the site domain |
+| `NEXT_PUBLIC_SITE_URL` | Public canonical origin of the dashboard deployment |
 | `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed profile sessions |
 | `DASHBOARD_SESSION_TTL_SECONDS` | Session lifetime, optional (default 12h) |
 
