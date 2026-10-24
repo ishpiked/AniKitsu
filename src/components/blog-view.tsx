@@ -106,42 +106,16 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   const [uploadingImage, setUploadingImage] = React.useState(false);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const mutationRevision = React.useRef(0);
+  const feedRequestRevision = React.useRef(0);
+  const feedRequestInFlight = React.useRef(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const canManage = isOperator;
 
-  React.useEffect(() => {
-    let active = true;
-    const revision = mutationRevision.current;
-    void fetchBlogPosts(0)
-      .then(
-        ({
-          posts: nextPosts,
-          hasMore: nextHasMore,
-          nextOffset: nextPageOffset,
-        }) => {
-          if (!active || revision !== mutationRevision.current) return;
-          setPosts(nextPosts);
-          setHasMore(nextHasMore);
-          setNextOffset(nextPageOffset);
-        }
-      )
-      .catch((reason: unknown) => {
-        if (!active || revision !== mutationRevision.current) return;
-        setFeedError(
-          reason instanceof Error ? reason.message : "Could not load blog posts."
-        );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const loadPosts = React.useCallback(
     async (offset = 0, append = false) => {
+      if (feedRequestInFlight.current) return;
+      feedRequestInFlight.current = true;
+      const requestRevision = ++feedRequestRevision.current;
       const revision = mutationRevision.current;
       setLoading(!append);
       setLoadingMore(append);
@@ -153,24 +127,54 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
           nextOffset: nextPageOffset,
         } =
           await fetchBlogPosts(offset);
-        if (revision !== mutationRevision.current) return;
+        if (
+          requestRevision !== feedRequestRevision.current ||
+          revision !== mutationRevision.current
+        )
+          return;
         setPosts((current) =>
           append ? [...current, ...nextPosts] : nextPosts
         );
         setHasMore(nextHasMore);
         setNextOffset(nextPageOffset);
       } catch (reason) {
-        if (revision !== mutationRevision.current) return;
+        if (
+          requestRevision !== feedRequestRevision.current ||
+          revision !== mutationRevision.current
+        )
+          return;
         setFeedError(
           reason instanceof Error ? reason.message : "Could not load blog posts."
         );
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestRevision === feedRequestRevision.current) {
+          feedRequestInFlight.current = false;
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     []
   );
+
+  React.useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void loadPosts();
+    };
+    const initialLoad = window.requestAnimationFrame(() => void loadPosts());
+    const timer = window.setInterval(refreshIfVisible, 60_000);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.cancelAnimationFrame(initialLoad);
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      feedRequestRevision.current += 1;
+      feedRequestInFlight.current = false;
+    };
+  }, [loadPosts]);
 
   const clearEditor = () => {
     setEditingId(null);
