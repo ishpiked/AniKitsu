@@ -1,6 +1,6 @@
 import UsersView from "./view";
 
-export const metadata = { title: "Users · Kitsu dev" };
+export const metadata = { title: "Users · Kitsu" };
 
 export default async function UsersPage({
   searchParams,

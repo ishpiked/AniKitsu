@@ -1,20 +1,22 @@
 import {
   BackendError,
+  clampHours,
   getAdminOverview,
+  getHealth,
+  getMonitoring,
   getPrometheus,
+  shapeMonitoringResponse,
 } from "@/lib/kitsu/client";
-import { alignAnalyticsWindow } from "@/lib/kitsu/derive";
 import type {
   AdminOverview,
+  MonitoringResponse,
   PrometheusData,
 } from "@/lib/kitsu/types";
-import AudienceView, { type Initial } from "./view";
+import OverviewView, { type Initial } from "./view";
 
 export const metadata = {
-  title: "Audience · Kitsu dev",
+  title: "Dashboard · Kitsu",
 };
-
-const DEFAULT_RANGE_HOURS = 168;
 
 function pick<T>(r: PromiseSettledResult<T>): Initial<T> {
   if (r.status === "fulfilled") return { data: r.value, error: null };
@@ -30,27 +32,25 @@ function pick<T>(r: PromiseSettledResult<T>): Initial<T> {
   };
 }
 
-export default async function AudiencePage({
+export default async function OverviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ hours?: string }>;
 }) {
-  const sp = await searchParams;
-  const hours = [168, 720, 2160].includes(Number(sp.hours))
-    ? Number(sp.hours)
-    : DEFAULT_RANGE_HOURS;
-  const window = alignAnalyticsWindow(hours, "day");
-
-  const [metrics, admin] = await Promise.allSettled([
+  const hours = clampHours((await searchParams).hours);
+  const [monitoring, metrics, health, admin] = await Promise.allSettled([
+    getMonitoring(hours).then(shapeMonitoringResponse),
     getPrometheus(),
+    getHealth(),
     getAdminOverview(),
   ]);
 
   return (
-    <AudienceView
-      initialRangeHours={hours}
-      initialWindow={window}
+    <OverviewView
+      initialHours={hours}
+      initialMonitoring={pick<MonitoringResponse>(monitoring)}
       initialMetrics={pick<PrometheusData>(metrics)}
+      initialHealth={pick<{ status: string }>(health)}
       initialAdmin={pick<AdminOverview>(admin)}
     />
   );

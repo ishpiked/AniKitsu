@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isOperatorRequest } from "@/lib/auth";
+import { isOwnerRequest } from "@/lib/auth";
 import { parseBlogPost, type BlogFeed, type BlogPost } from "@/lib/blog";
 import {
   BACKEND_TIMEOUT_MS,
@@ -94,10 +94,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   });
 }
 
-async function requireOperatorSession(
+async function requireOwnerSession(
   request: Request
 ): Promise<NextResponse | null> {
-  if (!(await isOperatorRequest(request))) {
+  if (!(await isOwnerRequest(request))) {
     return apiError("Sign in required.", 401);
   }
   return null;
@@ -148,7 +148,7 @@ function parsePostInput(value: unknown) {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const denied = await requireOperatorSession(request);
+  const denied = await requireOwnerSession(request);
   if (denied) return denied;
   const payload = await readBody(request);
   const input = parsePostInput(payload);
@@ -162,7 +162,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function PATCH(request: Request): Promise<NextResponse> {
-  const denied = await requireOperatorSession(request);
+  const denied = await requireOwnerSession(request);
   if (denied) return denied;
   const body = record(await readBody(request));
   const postId = typeof body?.postId === "string" ? body.postId : "";
@@ -178,7 +178,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 }
 
 export async function DELETE(request: Request): Promise<NextResponse> {
-  const denied = await requireOperatorSession(request);
+  const denied = await requireOwnerSession(request);
   if (denied) return denied;
   const body = record(await readBody(request));
   const postId = typeof body?.postId === "string" ? body.postId : "";

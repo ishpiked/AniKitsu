@@ -14,7 +14,7 @@ const links = [
   { href: "/status", label: "Status", icon: Activity },
   { href: "/blog", label: "Blog", icon: BookOpen },
   { href: "/bot", label: "Bot", icon: Bot },
-  { href: "/dev", label: "Dev", icon: LayoutDashboard },
+  { href: "/profile", label: "Profile", icon: LayoutDashboard },
 ];
 
 /**
@@ -23,12 +23,12 @@ const links = [
  * login page, which have their own chrome. Hooks stay above the early
  * return (Rules of Hooks).
  *
- * The Dev link is always shown: /dev itself is gated by the operator
- * passphrase session, and unauthenticated visitors are bounced to /login.
+ * The Profile link is available to all visitors. Telegram sign in reveals
+ * personal account data and owner tools only to the verified account.
  */
 export function SiteHeader() {
   const pathname = usePathname();
-  const hidden = pathname.startsWith("/dev") || pathname.startsWith("/login");
+  const hidden = pathname.startsWith("/profile/dashboard") || pathname.startsWith("/login");
 
   React.useEffect(() => {
     if (hidden) return;

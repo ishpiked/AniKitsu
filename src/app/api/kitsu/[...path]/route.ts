@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isOperatorRequest } from "@/lib/auth";
+import { isOwnerRequest } from "@/lib/auth";
 import {
   BACKEND_TIMEOUT_MS,
   adminToken,
@@ -305,7 +305,7 @@ export async function GET(
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  if (!(await isOperatorRequest(request))) {
+  if (!(await isOwnerRequest(request))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -409,7 +409,7 @@ export async function POST(
   if (key !== "api/owner/blog/images") {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  if (!(await isOperatorRequest(request))) {
+  if (!(await isOwnerRequest(request))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

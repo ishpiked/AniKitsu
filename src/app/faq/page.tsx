@@ -142,8 +142,8 @@ const GROUPS: {
         a: "Live API, bot, and server health with latency, uptime percentages shown next to their coverage, availability timelines, and recent state changes. Gaps mean missing samples, never healthy silence.",
       },
       {
-        q: "What is the dev dashboard?",
-        a: "The operator area at /dev with deeper monitoring, provider detail, audience totals, and the full feature catalog. It sits behind a passphrase gate and is only for operators.",
+        q: "What is available in my Kitsu profile?",
+        a: "Your profile shows your Telegram account details and Kitsu activity. The verified bot owner also has a detailed dashboard for monitoring, providers, audience data, and the feature catalog.",
       },
       {
         q: "I found a bug or someone breaking the rules. Where do I report it?",

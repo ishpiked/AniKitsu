@@ -151,7 +151,7 @@ export default function BotPage() {
             </a>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/dev/catalog">Full feature catalog</Link>
+            <Link href="/profile/dashboard/catalog">Full feature catalog</Link>
           </Button>
         </div>
       </div>
@@ -299,7 +299,7 @@ export default function BotPage() {
         })}
         <p className="text-sm text-muted-foreground">
           Owner and moderation commands live in the{" "}
-          <Link href="/dev/catalog" className="font-medium underline">
+          <Link href="/profile/dashboard/catalog" className="font-medium underline">
             operator catalog
           </Link>{" "}
           (sign-in required).

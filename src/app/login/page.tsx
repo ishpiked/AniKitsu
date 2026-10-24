@@ -1,31 +1,38 @@
-import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { LoginForm } from "@/components/login-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { SESSION_COOKIE, verifySession } from "@/lib/session";
+import { TelegramLogin } from "@/components/telegram-login";
+import { currentAccount } from "@/lib/auth";
 
-export const metadata = {
-  title: "Dev sign in · Kitsu",
+export const metadata: Metadata = {
+  title: "Sign in · Kitsu",
   robots: { index: false, follow: false },
 };
 
 export default async function LoginPage() {
-  // Already signed in? Skip the form.
-  const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
-  const store = await cookies();
-  if (
-    (await verifySession(store.get(SESSION_COOKIE)?.value, secret)) !== null
-  ) {
-    redirect("/dev");
-  }
+  if (await currentAccount()) redirect("/profile");
+  const botUsername = process.env.KITSU_TELEGRAM_BOT_USERNAME ?? "AniKitsuBot";
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
-      <span className="flex items-center gap-2">
-        <Logo className="size-10" />
-        <span className="text-sm font-medium tracking-tight">Kitsu · dev</span>
-      </span>
-      <LoginForm />
+    <main className="flex min-h-svh items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md rounded-3xl shadow-sm">
+        <CardHeader className="items-center text-center">
+          <Logo className="size-12" />
+          <CardTitle className="text-2xl">Your Kitsu profile</CardTitle>
+          <CardDescription className="max-w-xs leading-relaxed">
+            Sign in with Telegram to view your account. The owner account also
+            has access to the service dashboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-4">
+          <TelegramLogin botUsername={botUsername} />
+          <p className="max-w-xs text-center text-xs leading-relaxed text-muted-foreground">
+            Telegram verifies your account. Kitsu never asks for your Telegram
+            password or login code.
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

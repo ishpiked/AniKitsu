@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { parseBlogPost, type BlogPost } from "@/lib/blog";
+import {
+  deleteBlogPostAction,
+  loadBlogFeed,
+  saveBlogPostAction,
+} from "@/app/blog/actions";
+import type { BlogFeed, BlogPost } from "@/lib/blog";
 
 function errorMessage(payload: unknown, fallback: string): string {
   if (
@@ -37,68 +42,23 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-async function fetchBlogPosts(
-  offset: number
-): Promise<{ posts: BlogPost[]; hasMore: boolean; nextOffset: number }> {
-  let response: Response;
-  try {
-    response = await fetch(`/api/blog?limit=50&offset=${offset}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch (reason) {
-    const timedOut = reason instanceof DOMException && reason.name === "TimeoutError";
-    throw new Error(
-      timedOut
-        ? "The blog feed took too long to respond. Try again."
-        : "Could not reach the blog feed. Check the connection and try again."
-    );
-  }
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error(`Could not read the blog feed (${response.status}).`);
-  }
-  if (!response.ok) {
-    throw new Error(errorMessage(payload, "Could not load blog posts."));
-  }
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("items" in payload) ||
-    !Array.isArray(payload.items) ||
-    !("has_more" in payload) ||
-    typeof payload.has_more !== "boolean" ||
-    !("next_offset" in payload) ||
-    typeof payload.next_offset !== "number" ||
-    !Number.isSafeInteger(payload.next_offset) ||
-    payload.next_offset < offset ||
-    (payload.has_more && payload.next_offset === offset)
-  ) {
-    throw new Error("The blog feed returned an unexpected response.");
-  }
-  const posts: BlogPost[] = [];
-  for (const value of payload.items) {
-    const post = parseBlogPost(value);
-    if (post !== null) posts.push(post);
-  }
-  return {
-    posts,
-    hasMore: payload.has_more,
-    nextOffset: payload.next_offset,
-  };
-}
-
-export function BlogView({ isOperator }: { isOperator: boolean }) {
-  const [posts, setPosts] = React.useState<BlogPost[]>([]);
-  const [loading, setLoading] = React.useState(true);
+export function BlogView({
+  isOwner,
+  initialFeed,
+  initialError,
+}: {
+  isOwner: boolean;
+  initialFeed: BlogFeed | null;
+  initialError: string | null;
+}) {
+  const [posts, setPosts] = React.useState<BlogPost[]>(initialFeed?.items ?? []);
+  const [loading, setLoading] = React.useState(!initialFeed && !initialError);
   const [loadingMore, setLoadingMore] = React.useState(false);
-  const [hasMore, setHasMore] = React.useState(false);
-  const [nextOffset, setNextOffset] = React.useState(0);
+  const [hasMore, setHasMore] = React.useState(initialFeed?.has_more ?? false);
+  const [nextOffset, setNextOffset] = React.useState(initialFeed?.next_offset ?? 0);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [feedError, setFeedError] = React.useState<string | null>(null);
+  const [feedError, setFeedError] = React.useState<string | null>(initialError);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
@@ -109,7 +69,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
   const feedRequestRevision = React.useRef(0);
   const feedRequestInFlight = React.useRef(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
-  const canManage = isOperator;
+  const canManage = isOwner;
 
   const loadPosts = React.useCallback(
     async (offset = 0, append = false) => {
@@ -121,12 +81,8 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
       setLoadingMore(append);
       setFeedError(null);
       try {
-        const {
-          posts: nextPosts,
-          hasMore: nextHasMore,
-          nextOffset: nextPageOffset,
-        } =
-          await fetchBlogPosts(offset);
+        const feed = await loadBlogFeed(offset);
+        const nextPosts = feed.items;
         if (
           requestRevision !== feedRequestRevision.current ||
           revision !== mutationRevision.current
@@ -135,8 +91,8 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
         setPosts((current) =>
           append ? [...current, ...nextPosts] : nextPosts
         );
-        setHasMore(nextHasMore);
-        setNextOffset(nextPageOffset);
+        setHasMore(feed.has_more);
+        setNextOffset(feed.next_offset);
       } catch (reason) {
         if (
           requestRevision !== feedRequestRevision.current ||
@@ -161,20 +117,22 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
     const refreshIfVisible = () => {
       if (document.visibilityState === "visible") void loadPosts();
     };
-    const initialLoad = window.requestAnimationFrame(() => void loadPosts());
+    const initialLoad = !initialFeed && !initialError
+      ? window.requestAnimationFrame(() => void loadPosts())
+      : null;
     const timer = window.setInterval(refreshIfVisible, 60_000);
     window.addEventListener("focus", refreshIfVisible);
     document.addEventListener("visibilitychange", refreshIfVisible);
 
     return () => {
-      window.cancelAnimationFrame(initialLoad);
+      if (initialLoad !== null) window.cancelAnimationFrame(initialLoad);
       window.clearInterval(timer);
       window.removeEventListener("focus", refreshIfVisible);
       document.removeEventListener("visibilitychange", refreshIfVisible);
       feedRequestRevision.current += 1;
       feedRequestInFlight.current = false;
     };
-  }, [loadPosts]);
+  }, [initialError, initialFeed, loadPosts]);
 
   const clearEditor = () => {
     setEditingId(null);
@@ -192,33 +150,10 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
     setSuccess(null);
     const currentEditId = editingId;
     try {
-      const response = await fetch("/api/blog", {
-        method: currentEditId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          ...(currentEditId ? { postId: currentEditId } : {}),
-          title,
-          body,
-          imageId,
-        }),
-      });
-      let payload: unknown;
-      try {
-        payload = await response.json();
-      } catch {
-        throw new Error(`Could not save the post (${response.status}).`);
-      }
-      if (!response.ok) {
-        throw new Error(errorMessage(payload, "Could not save the post."));
-      }
-      const savedPost =
-        typeof payload === "object" && payload !== null && "post" in payload
-          ? parseBlogPost(payload.post)
-          : null;
-      if (!savedPost) {
-        throw new Error("The blog server did not confirm the saved post.");
-      }
+      const savedPost = await saveBlogPostAction(
+        { title, body, imageId },
+        currentEditId ?? undefined
+      );
       mutationRevision.current += 1;
       setLoading(false);
       setLoadingMore(false);
@@ -293,25 +228,7 @@ export function BlogView({ isOperator }: { isOperator: boolean }) {
     setFeedError(null);
     setSuccess(null);
     try {
-      const response = await fetch("/api/blog", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          postId: post.id,
-        }),
-      });
-      let payload: unknown = null;
-      try {
-        payload = await response.json();
-      } catch {
-        if (response.status !== 204) {
-          throw new Error(`Could not delete the post (${response.status}).`);
-        }
-      }
-      if (!response.ok) {
-        throw new Error(errorMessage(payload, "Could not delete the post."));
-      }
+      await deleteBlogPostAction(post.id);
       mutationRevision.current += 1;
       setLoading(false);
       setLoadingMore(false);

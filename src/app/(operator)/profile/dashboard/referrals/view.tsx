@@ -167,7 +167,7 @@ export default function ReferralView() {
               {data.top_referrers.length ? (
                 <div className="divide-y rounded-xl border">
                   {data.top_referrers.map((person, index) => (
-                    <Link key={person.user_id} href={`/dev/users?q=${person.user_id}`} className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
+                    <Link key={person.user_id} href={`/profile/dashboard/users?q=${person.user_id}`} className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
                       <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-xs font-semibold text-violet-600">{index + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{person.name || person.username || `User ${person.user_id}`}</span>

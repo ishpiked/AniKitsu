@@ -1084,7 +1084,7 @@ export default function LandingView({
                     </Link>
                   </Button>
                   <Button variant="outline" asChild>
-                    <Link href="/login">Dev sign in</Link>
+                    <Link href="/profile">Your profile</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -1137,10 +1137,10 @@ export default function LandingView({
               Bot
             </a>
             <Link
-              href="/login"
+              href="/profile"
               className="underline-offset-4 hover:text-foreground hover:underline"
             >
-              Dev
+              Profile
             </Link>
           </nav>
         </div>

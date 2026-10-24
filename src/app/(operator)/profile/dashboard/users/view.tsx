@@ -278,7 +278,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                   <Info label="Referred by" value={referredBy ? `${str(referredBy.name, `User ${referredBy.user_id}`)}${referredBy.username ? ` (@${String(referredBy.username)})` : ""} · ID ${String(referredBy.user_id)}` : str(user.referral_source, "Direct / not referred")} />
                   <Info label="Referral source" value={str(user.referral_source, "—").replaceAll("_", " ")} />
                   <Info label="Referral date" value={dateText(user.referral_at)} />
-                  {referredBy ? <Link className="text-sm font-medium text-violet-600 hover:underline dark:text-violet-300" href={`/dev/users?q=${String(referredBy.user_id)}`}>Open referrer account</Link> : null}
+                  {referredBy ? <Link className="text-sm font-medium text-violet-600 hover:underline dark:text-violet-300" href={`/profile/dashboard/users?q=${String(referredBy.user_id)}`}>Open referrer account</Link> : null}
                 </CardContent>
               </Card>
 
@@ -300,7 +300,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                       {referrals.map((person) => {
                         const id = count(person.user_id);
                         return (
-                          <Link key={id} href={`/dev/users?q=${id}`} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
+                          <Link key={id} href={`/profile/dashboard/users?q=${id}`} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-medium">{str(person.name, `User ${id}`)}</span>
                               <span className="block truncate text-xs text-muted-foreground">{person.username ? `@${String(person.username)} · ` : ""}ID {id} · {dateText(person.first_seen)}</span>

@@ -3,7 +3,7 @@ import type { AdminRoomsResponse } from "@/lib/kitsu/types";
 import RoomsView, { type Initial } from "./view";
 
 export const metadata = {
-  title: "Watch Together · Kitsu dev",
+  title: "Watch Together · Kitsu",
 };
 
 const PAGE_SIZE = 20;

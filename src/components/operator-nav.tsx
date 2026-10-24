@@ -15,22 +15,23 @@ import {
 import { cn } from "cn";
 
 const links = [
-  { href: "/dev", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/dev/health", label: "Service Health", icon: Activity },
-  { href: "/dev/providers", label: "Providers", icon: Server },
-  { href: "/dev/audience", label: "Audience", icon: Users },
-  { href: "/dev/users", label: "Users", icon: Users },
-  { href: "/dev/referrals", label: "Referrals", icon: Trophy },
-  { href: "/dev/rooms", label: "Watch Together", icon: MessagesSquare },
+  { href: "/profile", label: "Profile", icon: Users, exact: true },
+  { href: "/profile/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/profile/dashboard/health", label: "Service Health", icon: Activity },
+  { href: "/profile/dashboard/providers", label: "Providers", icon: Server },
+  { href: "/profile/dashboard/audience", label: "Audience", icon: Users },
+  { href: "/profile/dashboard/users", label: "Users", icon: Users },
+  { href: "/profile/dashboard/referrals", label: "Referrals", icon: Trophy },
+  { href: "/profile/dashboard/rooms", label: "Watch Together", icon: MessagesSquare },
   { href: "/blog", label: "Blog", icon: BookOpen },
-  { href: "/dev/catalog", label: "Feature Catalog", icon: LayoutGrid },
+  { href: "/profile/dashboard/catalog", label: "Feature Catalog", icon: LayoutGrid },
 ];
 
 export function OperatorNav() {
   const pathname = usePathname();
   return (
     <nav
-      aria-label="Operator"
+      aria-label="Owner workspace"
       className="no-scrollbar flex snap-x gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0"
     >
       {links.map((link) => {

@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { OperatorNav } from "@/components/operator-nav";
-import { logoutAction, requireOperator } from "@/lib/auth";
+import { logoutAction } from "@/app/actions/auth";
+import { requireOwner } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Dev · Kitsu",
+  title: "Owner dashboard · Kitsu",
   description: "Operator dashboard for the Kitsu Telegram streaming product.",
   robots: { index: false, follow: false },
 };
@@ -19,20 +20,20 @@ export default async function OperatorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireOperator();
+  await requireOwner();
 
   return (
     <div className="relative flex min-h-svh flex-col overflow-x-clip bg-muted/30 md:flex-row">
       <aside className="sticky top-0 z-40 flex shrink-0 flex-col border-b bg-background/90 shadow-sm backdrop-blur-xl md:h-svh md:w-64 md:border-b-0 md:border-r md:shadow-none">
         <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-5 md:pt-6 md:pb-5">
-          <Link href="/dev" className="group flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Link href="/profile" className="group flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-violet-500/10 ring-1 ring-violet-500/20 transition-transform group-hover:scale-105">
               <Logo className="size-8" />
             </span>
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-semibold tracking-tight">Kitsu</span>
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Operator workspace
+                Owner workspace
               </span>
             </span>
           </Link>
@@ -57,11 +58,11 @@ export default async function OperatorLayout({
           <div className="rounded-2xl border bg-card/80 p-3">
             <p className="text-xs font-medium">Private operator area</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Service and audience data is visible only to signed-in operators.
+              Service and audience data is visible only to the verified bot owner.
             </p>
           </div>
           <p className="px-1 text-[11px] leading-snug text-muted-foreground">
-            Restricted area. Never share the operator passphrase.
+            Restricted area. Sign in with the Telegram account that owns the bot.
           </p>
           <Separator />
           <form action={logoutAction}>

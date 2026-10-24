@@ -12,8 +12,9 @@ watch in the browser or inside Telegram, solo or in a synced room.
 | Service status | `/status` | Public, unauthenticated sanitized snapshot |
 | Blog | `/blog` | Public reading; owner-only writing |
 | Bot guide | `/bot` | Public command reference |
-| Operator dashboard | `/dev` | Passphrase-gated operator area |
-| Sign in | `/login` | Operator passphrase sign-in |
+| Profile | `/profile` | Telegram verified personal account |
+| Owner dashboard | `/profile/dashboard` | Bot owner account only |
+| Sign in | `/login` | Telegram account sign-in |
 
 ## The Telegram bot
 
@@ -33,14 +34,21 @@ everything around it.
 - **Owner tools**: service stats, provider health checks, sessions, activity
   inspection, moderation, maintenance, and broadcasts (owner ID only).
 
-A full command-by-command reference lives in the in-app feature catalog
-(`/dev/catalog`, operator only) and in summarized form on `/bot`.
+A full command-by-command reference lives in the owner feature catalog
+(`/profile/dashboard/catalog`) and in summarized form on `/bot`.
 
-## Operator dashboard (`/dev`)
+## Profile and owner dashboard
 
-Read-only coverage built on the backend monitoring and admin analytics APIs. Every
-`/dev` page and its BFF endpoints require a valid operator session signed in
-with the `DASHBOARD_PASSPHRASE` gate at `/login`.
+Users sign in with Telegram and see their account details, watch activity, and
+recent titles at `/profile`. The bot owner sees an additional service dashboard
+at `/profile/dashboard`. Telegram signs the login data, the backend verifies it
+with the existing bot token, and Kitsu stores the verified identity in a signed
+HTTP only session cookie. Owner pages and data are checked on the server.
+
+Dashboard reads and blog operations run from Kitsu server code directly to the
+configured FastAPI backend. The browser does not need a separate Kitsu JSON
+proxy for profile data or blog posts. The backend address must be stable.
+Temporary tunnel addresses can expire and cause DNS errors.
 
 - **Overview**: overall Operational / Degraded / Down / Unknown verdict with
   reasons, plus API, bot, provider, traffic, audience, and history cards.
@@ -74,9 +82,9 @@ Playback controls are now easier to use on mobile.
 
 The bot uses the first line as the title (up to 160 characters), the remaining
 lines as the body, and can mirror an attached JPEG, PNG, GIF, or WebP photo up
-to 5 MiB. Only a signed-in operator session can create, edit, or delete
-dashboard-written posts. Channel announcements link back to their Telegram
-message.
+to 5 MiB. Only the verified bot owner can create, edit, or delete
+dashboard-written posts. Blog pages load from the backend during server
+rendering. Channel announcements link back to their Telegram message.
 
 ## Configuration
 
@@ -85,17 +93,16 @@ exposed to the browser or the public status page.
 
 | Variable | Purpose |
 |---|---|
-| `KITSU_API_URL` | Base URL of the FastAPI backend (no trailing slash) |
+| `KITSU_API_URL` | Stable base URL of the FastAPI backend |
 | `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
-| `DASHBOARD_PASSPHRASE` | Shared passphrase guarding `/dev` sign-in |
-| `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed sessions |
+| `KITSU_TELEGRAM_BOT_USERNAME` | Telegram bot username linked to the site domain |
+| `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed profile sessions |
 | `DASHBOARD_SESSION_TTL_SECONDS` | Session lifetime, optional (default 12h) |
 
 Copy `.env.example` to your hosting provider's environment settings. Set the
-passphrase, API token, and a random session secret in the webapp
-deployment. The session secret signs the operator session cookie for the
-passphrase-gated Dev area. The owner API token stays server-side;
-never commit real values.
+stable backend address, bot username, owner API token, and a random session
+secret in the webapp deployment. Link the site domain to the bot in BotFather.
+The owner API token stays server side and must never be committed.
 
 ## Develop
 

@@ -8,7 +8,7 @@ import type { ServersResponse } from "@/lib/kitsu/types";
 import ProvidersView from "./view";
 
 export const metadata = {
-  title: "Providers · Kitsu dev",
+  title: "Providers · Kitsu",
 };
 
 export default async function ProvidersPage({

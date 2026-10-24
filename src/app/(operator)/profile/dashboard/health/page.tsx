@@ -6,7 +6,7 @@ import {
 import HealthView from "./view";
 
 export const metadata = {
-  title: "Service Health · Kitsu dev",
+  title: "Service Health · Kitsu",
 };
 
 export default async function HealthPage({

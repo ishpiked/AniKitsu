@@ -40,7 +40,7 @@ const sections = [
   {
     n: "5",
     title: "Cookies",
-    body: "The public pages set no tracking cookies. The operator area (/dev) sets one signed session cookie so the passphrase gate works. Nothing else.",
+    body: "Public pages do not set tracking cookies. Signing in with Telegram sets one signed, secure session cookie for your profile. The cookie is used to identify your account and, for the bot owner, authorize the private dashboard.",
   },
   {
     n: "6",

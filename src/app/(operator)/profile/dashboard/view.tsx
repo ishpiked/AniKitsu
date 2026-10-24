@@ -614,7 +614,7 @@ export default function OverviewView({
                   </div>
                   <p>
                     <Link
-                      href="/dev/providers"
+                      href="/profile/dashboard/providers"
                       className="font-medium underline"
                     >
                       Open provider detail
@@ -719,7 +719,7 @@ export default function OverviewView({
               </p>
               <p>
                 <Link
-                  href="/dev/audience"
+                  href="/profile/dashboard/audience"
                   className="font-medium underline"
                 >
                   Open audience detail
@@ -907,7 +907,7 @@ export default function OverviewView({
               <p className="text-xs text-muted-foreground">
                 Active rooms on this backend process
                 {adminRooms.scope ? ` (${adminRooms.scope})` : ""}.{" "}
-                <Link href="/dev/rooms" className="font-medium underline">
+                <Link href="/profile/dashboard/rooms" className="font-medium underline">
                   Open room detail
                 </Link>
               </p>
