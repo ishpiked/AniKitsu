@@ -39,11 +39,13 @@ A full command-by-command reference lives in the owner feature catalog
 
 ## Profile and owner dashboard
 
-Users sign in with Telegram and see their account details, watch activity, and
-recent titles at `/profile`. The bot owner sees an additional service dashboard
-at `/profile/dashboard`. Telegram signs the login data, the backend verifies it
-with the existing bot token, and Kitsu stores the verified identity in a signed
-HTTP only session cookie. Owner pages and data are checked on the server.
+Users see their account details, watch activity, and recent titles at
+`/profile`. When opened inside Telegram, the page signs them in automatically
+with Telegram's signed Web App data. Browser visitors can use the Telegram Login
+Widget. The backend verifies both methods with the existing bot token, and
+Kitsu stores the verified identity in a signed HTTP only session cookie. The
+bot owner sees an additional service dashboard at `/profile/dashboard`. Owner
+pages and data are checked on the server.
 
 Dashboard and blog data requests go through Kitsu server routes to the
 configured FastAPI backend. The browser talks to the same-origin Kitsu routes;

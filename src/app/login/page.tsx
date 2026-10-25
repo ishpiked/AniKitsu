@@ -21,8 +21,9 @@ export default async function LoginPage() {
           <Logo className="size-12" />
           <CardTitle className="text-2xl">Your Kitsu profile</CardTitle>
           <CardDescription className="max-w-xs leading-relaxed">
-            Sign in with Telegram to view your account. The owner account also
-            has access to the service dashboard.
+            Open this page in Telegram to sign in automatically. Browser users
+            can continue with Telegram below. The owner account also has access
+            to the service dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">

@@ -22,6 +22,8 @@ interface TelegramLoginData {
   hash: string;
 }
 
+type TelegramLoginIdentity = TelegramLoginData | { init_data: string };
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -68,21 +70,27 @@ function sessionTtlSeconds(): number {
     : SESSION_TTL_SECONDS;
 }
 
-export async function loginWithTelegram(value: unknown) {
-  const telegramUser = parseTelegramLoginData(value);
+async function exchangeTelegramLogin(
+  identity: TelegramLoginIdentity,
+  expectedId: number | null,
+) {
   const secret = process.env.DASHBOARD_SESSION_SECRET ?? "";
-  if (!telegramUser) return { error: "Telegram returned incomplete sign in details." };
   if (!secret) return { error: "Profile sign in is not configured on this server." };
 
   let result: Response;
   try {
-    result = await fetch(`${backendBaseUrl()}/api/account/telegram-login`, {
-      method: "POST",
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
-      headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify(telegramUser),
-    });
+    const webAppLogin = "init_data" in identity;
+    const endpoint = webAppLogin ? "telegram-webapp-login" : "telegram-login";
+    result = await fetch(
+      `${backendBaseUrl()}/api/account/${endpoint}`,
+      {
+        method: "POST",
+        cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify(identity),
+      },
+    );
   } catch {
     return { error: "Kitsu could not reach the sign in service. Try again shortly." };
   }
@@ -105,7 +113,9 @@ export async function loginWithTelegram(value: unknown) {
   const profile = asRecord(body?.user);
   if (
     !profile ||
-    profile.id !== telegramUser.id ||
+    !Number.isSafeInteger(profile.id) ||
+    Number(profile.id) <= 0 ||
+    (expectedId !== null && profile.id !== expectedId) ||
     typeof profile.first_name !== "string" ||
     typeof profile.is_owner !== "boolean"
   ) {
@@ -167,7 +177,7 @@ export async function loginWithTelegram(value: unknown) {
 
   const exp = Math.floor(Date.now() / 1000) + sessionTtlSeconds();
   const session: AccountSession = {
-    id: telegramUser.id,
+    id: Number(profile.id),
     firstName: profile.first_name.slice(0, 64),
     lastName:
       typeof profile.last_name === "string" ? profile.last_name.slice(0, 64) : "",
@@ -189,7 +199,20 @@ export async function loginWithTelegram(value: unknown) {
     path: "/",
     maxAge: sessionTtlSeconds(),
   });
-  redirect("/profile");
+  redirect(session.isOwner ? "/profile/dashboard" : "/profile");
+}
+
+export async function loginWithTelegram(value: unknown) {
+  const telegramUser = parseTelegramLoginData(value);
+  if (!telegramUser) return { error: "Telegram returned incomplete sign in details." };
+  return exchangeTelegramLogin(telegramUser, telegramUser.id);
+}
+
+export async function loginWithTelegramWebApp(value: unknown) {
+  if (typeof value !== "string" || !value || value.length > 8_192) {
+    return { error: "Telegram did not provide valid Web App sign in details." };
+  }
+  return exchangeTelegramLogin({ init_data: value }, null);
 }
 
 export async function logoutAction(): Promise<void> {
