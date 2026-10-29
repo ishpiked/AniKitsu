@@ -46,7 +46,7 @@ export function ChartShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl shadow-sm shadow-black/[0.025]">
+    <Card className="rounded-lg border-border/80 shadow-none">
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
@@ -70,7 +70,7 @@ export function KpiCard({
   sub?: string;
 }) {
   return (
-    <Card className="rounded-2xl border-violet-500/10 bg-gradient-to-br from-card to-violet-500/[0.025] shadow-sm shadow-black/[0.025]">
+    <Card className="rounded-lg border-border/80 bg-card shadow-none">
       <CardHeader className="pb-2">
         <CardDescription className="text-xs font-medium uppercase tracking-[0.1em]">
           {label}

@@ -162,10 +162,10 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
   const watchTime = `${Math.floor(watchedSeconds / 3600)}h ${Math.floor((watchedSeconds % 3600) / 60)}m`;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="operator-page flex flex-col gap-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">Private operator tools</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Private operator tools</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Users</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Find a Telegram account, inspect its watch activity, and trace who invited whom.
@@ -216,7 +216,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                 const id = count(person.user_id);
                 const active = person.is_active === true && person.banned !== true;
                 return (
-                  <button key={id} type="button" onClick={() => { if (selectedId === id) { setLoadingDetail(true); setLoadingReferrals(true); setDetailError(null); setReferralError(null); setRefresh((value) => value + 1); return; } setDetail(null); setReferrals([]); setMoreReferrals(false); setLoadingDetail(true); setLoadingReferrals(true); setDetailError(null); setReferralError(null); setSelectedId(id); }} className={`flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 ${selectedId === id ? "bg-violet-500/10" : ""}`}>
+                  <button key={id} type="button" onClick={() => { if (selectedId === id) { setLoadingDetail(true); setLoadingReferrals(true); setDetailError(null); setReferralError(null); setRefresh((value) => value + 1); return; } setDetail(null); setReferrals([]); setMoreReferrals(false); setLoadingDetail(true); setLoadingReferrals(true); setDetailError(null); setReferralError(null); setSelectedId(id); }} className={`flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 ${selectedId === id ? "bg-primary/10" : ""}`}>
                     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-xs font-semibold">{str(person.name, "?").slice(0, 1).toUpperCase()}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{str(person.name, `User ${id}`)}</span>
@@ -236,7 +236,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
           {!selectedId ? (
             <Card className="flex min-h-64 items-center justify-center rounded-2xl border-dashed bg-card/70 text-center shadow-sm shadow-black/[0.025]">
               <CardContent className="flex flex-col items-center gap-2 pt-6">
-                <Users className="size-6 text-violet-500" />
+                <Users className="size-6 text-primary" />
                 <p className="font-medium">Select an account</p>
                 <p className="max-w-sm text-sm text-muted-foreground">Account status, watch history, referral source, and invited users will appear here.</p>
               </CardContent>
@@ -278,7 +278,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                   <Info label="Referred by" value={referredBy ? `${str(referredBy.name, `User ${referredBy.user_id}`)}${referredBy.username ? ` (@${String(referredBy.username)})` : ""} · ID ${String(referredBy.user_id)}` : str(user.referral_source, "Direct / not referred")} />
                   <Info label="Referral source" value={str(user.referral_source, "—").replaceAll("_", " ")} />
                   <Info label="Referral date" value={dateText(user.referral_at)} />
-                  {referredBy ? <Link className="text-sm font-medium text-violet-600 hover:underline dark:text-violet-300" href={`/profile/dashboard/users?q=${String(referredBy.user_id)}`}>Open referrer account</Link> : null}
+                  {referredBy ? <Link className="text-sm font-medium text-primary hover:underline dark:text-primary" href={`/profile/dashboard/users?q=${String(referredBy.user_id)}`}>Open referrer account</Link> : null}
                 </CardContent>
               </Card>
 
@@ -324,7 +324,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                 <Card className="min-w-0 rounded-2xl shadow-sm shadow-black/[0.025]">
                   <CardHeader><CardTitle>Recent watches</CardTitle><CardDescription>Resume activity recorded by the player.</CardDescription></CardHeader>
                   <CardContent>
-                    {watches.length ? <div className="divide-y rounded-xl border">{watches.slice(0, 8).map((watch, index) => <div key={`${String(watch.imdb)}-${String(watch.episode)}-${index}`} className="flex items-start gap-3 px-3 py-3"><Activity className="mt-0.5 size-4 shrink-0 text-violet-500" /><span className="min-w-0"><span className="block truncate text-sm font-medium">{str(watch.title)}</span><span className="block text-xs text-muted-foreground">{str(watch.media_type)}{watch.episode ? ` · S${String(watch.season)} E${String(watch.episode)}` : ""} · {dateText(watch.updated_at)}</span></span></div>)}</div> : <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No player resume points recorded.</p>}
+                    {watches.length ? <div className="divide-y rounded-xl border">{watches.slice(0, 8).map((watch, index) => <div key={`${String(watch.imdb)}-${String(watch.episode)}-${index}`} className="flex items-start gap-3 px-3 py-3"><Activity className="mt-0.5 size-4 shrink-0 text-primary" /><span className="min-w-0"><span className="block truncate text-sm font-medium">{str(watch.title)}</span><span className="block text-xs text-muted-foreground">{str(watch.media_type)}{watch.episode ? ` · S${String(watch.season)} E${String(watch.episode)}` : ""} · {dateText(watch.updated_at)}</span></span></div>)}</div> : <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No player resume points recorded.</p>}
                   </CardContent>
                 </Card>
                 <Card className="min-w-0 rounded-2xl shadow-sm shadow-black/[0.025]">

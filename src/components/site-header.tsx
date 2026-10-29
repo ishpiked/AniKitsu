@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Activity, BookOpen, Bot, House, LayoutDashboard } from "@/lib/icons";
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UtcClock } from "@/components/utc-clock";
 import { cn } from "cn";
 
@@ -45,11 +44,11 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="absolute inset-x-0 top-0 z-50 flex justify-center px-4 pt-3">
-        <div className="flex items-center gap-1 rounded-full border bg-background/80 py-1.5 pr-2 pl-3 shadow-sm backdrop-blur-xl">
+      <header className="absolute inset-x-0 top-0 z-50 flex justify-center px-4 pt-4">
+        <div className="site-nav-shell flex h-12 items-center gap-1 px-2.5">
           <Link href="/" className="mr-1 flex items-center gap-2">
-            <Logo className="size-8" />
-            <span className="text-sm font-semibold tracking-tight">Kitsu</span>
+            <Logo className="size-9" />
+            <span className="text-sm font-extrabold tracking-[-0.02em]">Kitsu</span>
           </Link>
           <nav aria-label="Site" className="hidden items-center gap-1 sm:flex">
             {links.map(({ href, label, exact }) => (
@@ -58,10 +57,10 @@ export function SiteHeader() {
                 href={href}
                 aria-current={isActive(href, exact) ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  "border-b-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
                   isActive(href, exact)
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                    ? "border-foreground text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {label}
@@ -69,34 +68,36 @@ export function SiteHeader() {
             ))}
           </nav>
           <UtcClock className="ml-2 hidden lg:inline-flex" />
-          <span className="ml-1">
-            <ThemeToggle />
-          </span>
         </div>
       </header>
 
       <nav
         aria-label="Site"
-        className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 sm:hidden"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
+        className="mobile-site-nav fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 sm:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
-        <div className="flex items-center gap-1 rounded-full border bg-background/85 px-2 py-1.5 shadow-lg backdrop-blur-xl">
-          {links.map(({ href, label, icon: Icon, exact }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive(href, exact) ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-                isActive(href, exact)
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-              {label}
-            </Link>
-          ))}
+        <div className="mobile-site-nav-inner flex w-full items-center justify-between gap-1 p-1.5">
+          {links.map(({ href, label, icon: Icon, exact }) => {
+            const active = isActive(href, exact);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "mobile-site-nav-item flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] px-1 py-1.5 text-[10px] font-medium leading-none transition-colors",
+                  active
+                    ? "mobile-site-nav-item-active text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span className="mobile-site-nav-icon flex size-7 items-center justify-center rounded-[9px]">
+                  <Icon className="size-[18px]" aria-hidden />
+                </span>
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>

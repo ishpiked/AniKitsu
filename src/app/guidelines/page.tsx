@@ -61,7 +61,7 @@ const sections = [
 
 export default function GuidelinesPage() {
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
+    <div className="document-page guidelines-page mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
       <div className="flex flex-col items-start gap-4">
         <Badge variant="secondary">Community</Badge>
         <h1 className="max-w-3xl text-balance text-3xl font-semibold tracking-tight md:text-5xl">

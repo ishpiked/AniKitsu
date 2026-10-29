@@ -33,10 +33,10 @@ import type { OverallState, PublicStatus } from "@/lib/kitsu/types";
 import { cn } from "cn";
 
 const stateClass: Record<OverallState, string> = {
-  operational: "border-emerald-500/50",
-  degraded: "border-amber-500/50",
-  down: "border-red-500/60",
-  unknown: "border-dashed",
+  operational: "status-current-operational",
+  degraded: "status-current-degraded",
+  down: "status-current-down",
+  unknown: "status-current-unknown",
 };
 
 const stateLabel: Record<OverallState, string> = {
@@ -76,7 +76,7 @@ export default function StatusView({
     data?.providers.filter((p) => p.status === "down") ?? [];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 md:p-8">
+    <div className="status-page mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 md:p-8">
       <div className="flex flex-col gap-1 pt-16">
         <h1 className="text-2xl font-semibold tracking-tight">
           Service status
@@ -97,6 +97,7 @@ export default function StatusView({
         onRefresh={status.refresh}
         updatedAt={status.updatedAt}
         live={status.error === null}
+        refreshing={status.refreshing}
       />
 
       {status.error && !data ? (
@@ -105,7 +106,7 @@ export default function StatusView({
 
       {data ? (
         <>
-          <Card className={cn("border-2", stateClass[data.verdict.state])}>
+          <Card className={cn("status-current", stateClass[data.verdict.state])}>
             <CardHeader className="pb-2">
               <CardDescription>Current status</CardDescription>
               <CardTitle className="text-2xl">
@@ -127,8 +128,8 @@ export default function StatusView({
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card>
+          <div className="status-summary-grid grid gap-px md:grid-cols-2 xl:grid-cols-4">
+            <Card className="status-summary-card">
               <CardHeader className="pb-2">
                 <CardDescription>API</CardDescription>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -163,7 +164,7 @@ export default function StatusView({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="status-summary-card">
               <CardHeader className="pb-2">
                 <CardDescription>Telegram bot</CardDescription>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -195,7 +196,7 @@ export default function StatusView({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="status-summary-card">
               <CardHeader className="pb-2">
                 <CardDescription>Stream providers</CardDescription>
                 <CardTitle className="text-lg tabular-nums">
@@ -222,7 +223,7 @@ export default function StatusView({
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="status-summary-card">
               <CardHeader className="pb-2">
                 <CardDescription>Dante · Anime streaming</CardDescription>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -317,8 +318,8 @@ export default function StatusView({
                 },
               }))}
               series={[
-                { key: "mean", label: "Mean", color: "#0ea5e9" },
-                { key: "p95", label: "p95", color: "#8b5cf6" },
+                { key: "mean", label: "Mean", color: "#f0f0f0" },
+                                { key: "p95", label: "p95", color: "#777777" },
               ]}
               formatY={(v) => `${Math.round(v)} ms`}
               brush

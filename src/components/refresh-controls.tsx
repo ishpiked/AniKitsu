@@ -30,6 +30,7 @@ export function RefreshControls({
   onRefresh,
   updatedAt,
   live,
+  refreshing = false,
 }: {
   hours: number;
   onHours: (hours: number) => void;
@@ -39,8 +40,20 @@ export function RefreshControls({
   updatedAt: number | null;
   /** True when the freshest fetch succeeded. */
   live: boolean;
+  refreshing?: boolean;
 }) {
   const [spinning, setSpinning] = React.useState(false);
+  const [now, setNow] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (updatedAt === null) return;
+    const initial = window.setTimeout(() => setNow(Date.now()), 0);
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(id);
+    };
+  }, [updatedAt]);
 
   const handleRefresh = () => {
     onRefresh();
@@ -49,7 +62,7 @@ export function RefreshControls({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="refresh-controls flex flex-wrap items-center gap-2">
       <OptionDropdown
         value={String(hours)}
         onChange={(v) => onHours(Number(v))}
@@ -62,7 +75,7 @@ export function RefreshControls({
           description: o.description,
         }))}
       />
-      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
+      <div className="flex h-9 items-center gap-0.5 rounded-md border border-border/80 bg-card p-0.5">
         <Button
           variant={paused ? "default" : "ghost"}
           size="sm"
@@ -84,20 +97,22 @@ export function RefreshControls({
           className="rounded-md"
         >
           <RefreshCw
-            className={cn("size-4", spinning && "animate-spin")}
+            className={cn("size-4", (spinning || refreshing) && "animate-spin")}
+            aria-hidden="true"
           />
         </Button>
       </div>
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span
+          key={updatedAt ?? "waiting"}
           aria-hidden
           className={cn(
             "inline-block size-2 rounded-full",
-            live ? "bg-emerald-500" : "bg-red-500"
+            live ? "live-data-dot bg-emerald-500" : "bg-red-500"
           )}
         />
-        {updatedAt ? `Updated ${formatAgo(new Date(updatedAt).toISOString())}` : "Waiting for data"}
-        {paused ? " · auto-refresh paused" : " · auto-refresh 45s"}
+        {refreshing ? "Checking live services" : updatedAt ? `Updated ${now === null ? "recently" : formatAgo(new Date(updatedAt).toISOString(), now)}` : "Waiting for data"}
+        {paused ? " · auto-refresh paused" : refreshing ? "" : " · auto-refresh 45s"}
       </span>
     </div>
   );

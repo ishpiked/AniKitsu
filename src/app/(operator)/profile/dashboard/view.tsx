@@ -47,13 +47,14 @@ import type {
   OverallState,
   PrometheusData,
 } from "@/lib/kitsu/types";
+import { Logo } from "@/components/logo";
 import { cn } from "cn";
 
 const stateClass: Record<OverallState, string> = {
-  operational: "border-emerald-500/50",
-  degraded: "border-amber-500/50",
-  down: "border-red-500/60",
-  unknown: "border-dashed",
+  operational: "border-l-emerald-400",
+  degraded: "border-l-amber-400",
+  down: "border-l-red-400",
+  unknown: "border-l-border",
 };
 
 const stateLabel: Record<OverallState, string> = {
@@ -350,28 +351,34 @@ export default function OverviewView({
     : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="relative isolate overflow-hidden rounded-3xl border bg-gradient-to-br from-violet-500/[0.10] via-card to-card p-5 shadow-sm sm:p-7">
+    <div className="operator-page flex flex-col gap-6">
+      <div className="relative isolate overflow-hidden rounded-[28px] border border-white/[0.08] bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-8">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 -z-10 size-80 rounded-full bg-fuchsia-400/10 blur-3xl"
+          className="pointer-events-none absolute -right-16 -top-24 -z-10 size-80 rounded-full bg-white/[0.07] blur-3xl"
         />
         <div className="relative flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">
-              Kitsu · Operations
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Overview
+            <div className="flex items-center gap-2.5">
+              <Logo className="size-8" />
+              <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                Kitsu operations
+              </p>
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+              Operations overview
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Service health, audience activity, and Watch Together at a glance.
+            </p>
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground/80">
               {monitoring.data
                 ? `Sampled ${formatAgo(monitoring.data.current.timestamp)} · generated ${formatUtc(monitoring.data.generated_at)}.`
                 : "Waiting for the first backend snapshot."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border bg-background/70 px-3 text-xs font-medium text-muted-foreground">
+            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-medium text-muted-foreground">
               <span
                 aria-hidden="true"
                 className={cn(
@@ -389,6 +396,7 @@ export default function OverviewView({
               onRefresh={refreshAll}
               updatedAt={monitoring.updatedAt}
               live={live}
+              refreshing={monitoring.refreshing || metrics.refreshing}
             />
           </div>
         </div>
@@ -422,10 +430,17 @@ export default function OverviewView({
       ) : null}
 
       {verdict && current ? (
-        <Card className={cn("rounded-2xl border-2 shadow-sm", stateClass[verdict.state])}>
+        <Card
+          className={cn(
+            "rounded-2xl border-l-4 bg-card/90 shadow-lg shadow-black/10",
+            stateClass[verdict.state]
+          )}
+        >
           <CardHeader className="pb-2">
-            <CardDescription>Overall state</CardDescription>
-            <CardTitle className="text-2xl">{stateLabel[verdict.state]}</CardTitle>
+            <CardDescription>Overall system state</CardDescription>
+            <CardTitle className="text-2xl font-semibold tracking-tight">
+              {stateLabel[verdict.state]}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
@@ -818,8 +833,8 @@ export default function OverviewView({
               values: { mean: p.mean, p95: p.p95 },
             }))}
             series={[
-              { key: "mean", label: "Mean", color: "#0ea5e9" },
-              { key: "p95", label: "p95", color: "#8b5cf6" },
+              { key: "mean", label: "Mean", color: "#e5e5e5" },
+              { key: "p95", label: "p95", color: "#737373" },
             ]}
             formatY={(v) => `${Math.round(v)} ms`}
           />
@@ -842,7 +857,7 @@ export default function OverviewView({
                 t: d.t,
                 values: { joins: d.joins },
               }))}
-              series={[{ key: "joins", label: "Users joined", color: "#0ea5e9" }]}
+              series={[{ key: "joins", label: "Users joined", color: "#d4d4d4" }]}
               formatY={(v) => String(Math.round(v))}
               tickMode="date"
               brush
@@ -871,7 +886,7 @@ export default function OverviewView({
                 t: d.t,
                 values: { joins: d.joins },
               }))}
-              series={[{ key: "joins", label: "Groups joined", color: "#8b5cf6" }]}
+              series={[{ key: "joins", label: "Groups joined", color: "#737373" }]}
               formatY={(v) => String(Math.round(v))}
               tickMode="date"
               brush

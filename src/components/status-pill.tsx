@@ -57,7 +57,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all duration-200",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] leading-5 font-semibold transition-colors duration-150",
         config.bg,
         config.border,
         config.text,
@@ -68,7 +68,8 @@ export function StatusPill({
         <span
           className={cn(
             "size-1.5 rounded-full",
-            config.dot
+            config.dot,
+            (status === "down" || status === "degraded") && "status-alert-dot"
           )}
         />
       )}

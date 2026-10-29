@@ -79,10 +79,10 @@ export default function ReferralView() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="operator-page flex flex-col gap-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">Community growth</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Community growth</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Referrals</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             First-time joins, first streams, campaign sources, and the people bringing new viewers to Kitsu.
@@ -117,8 +117,8 @@ export default function ReferralView() {
                     {data.daily.map((day) => (
                       <div key={day.id} className="flex min-w-0 flex-col items-center gap-1.5" title={`${day.id}: ${day.users} joined, ${day.activated} streamed`}>
                         <div className="flex h-28 w-full items-end justify-center rounded-lg bg-muted/50 p-1">
-                          <div className="relative w-full overflow-hidden rounded-md bg-violet-500/25" style={{ height: `${Math.max(4, (day.users / maxDaily) * 100)}%` }}>
-                            <div className="absolute inset-x-0 bottom-0 bg-violet-600/80" style={{ height: `${day.users ? (day.activated / day.users) * 100 : 0}%` }} />
+                          <div className="relative w-full overflow-hidden rounded-md bg-primary/25" style={{ height: `${Math.max(4, (day.users / maxDaily) * 100)}%` }}>
+                            <div className="absolute inset-x-0 bottom-0 bg-primary/80" style={{ height: `${day.users ? (day.activated / day.users) * 100 : 0}%` }} />
                           </div>
                         </div>
                         <span className="text-[10px] tabular-nums text-muted-foreground">{day.id.slice(5)}</span>
@@ -131,8 +131,8 @@ export default function ReferralView() {
                   </div>
                 )}
                 <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-violet-500/30" /> Joined</span>
-                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-violet-700/80" /> First stream</span>
+                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-primary/30" /> Joined</span>
+                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-primary/80" /> First stream</span>
                 </div>
               </CardContent>
             </Card>
@@ -149,7 +149,7 @@ export default function ReferralView() {
                       <p className="font-medium">{source.id === "creator_kit" ? "Creator Kit" : "Personal links"}</p>
                       <p className="text-xs text-muted-foreground">{source.activated} of {source.users} began streaming</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-violet-700 dark:text-violet-300">{source.users}</span>
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary dark:text-primary">{source.users}</span>
                   </div>
                 )) : (
                   <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No referral links have been used yet.</p>
@@ -168,7 +168,7 @@ export default function ReferralView() {
                 <div className="divide-y rounded-xl border">
                   {data.top_referrers.map((person, index) => (
                     <Link key={person.user_id} href={`/profile/dashboard/users?q=${person.user_id}`} className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-xs font-semibold text-violet-600">{index + 1}</span>
+                      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{person.name || person.username || `User ${person.user_id}`}</span>
                         <span className="block truncate text-xs text-muted-foreground">{person.username ? `@${person.username} · ` : ""}ID {person.user_id}</span>

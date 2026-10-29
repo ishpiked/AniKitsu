@@ -245,7 +245,7 @@ export function BlogView({
   return (
     <div className="flex flex-col gap-6">
       {canManage ? (
-        <Card className="rounded-3xl border-violet-500/15 bg-gradient-to-br from-card to-violet-500/[0.035] shadow-sm shadow-violet-950/[0.04]">
+        <Card className="rounded-3xl border-primary/15 bg-gradient-to-br from-card to-primary/[0.035] shadow-sm shadow-primary/[0.04]">
           <CardHeader>
             <CardTitle className="text-xl">
               {editingId ? "Edit your post" : "Write a post"}

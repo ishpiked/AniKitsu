@@ -1,16 +1,22 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, Geist_Mono, Inter } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TelegramScript } from "@/components/telegram-script";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -25,20 +31,24 @@ export const metadata: Metadata = {
     template: "%s · Kitsu",
   },
   description:
-    "Kitsu: Telegram-native title discovery, streaming, and Watch Together.",
+    "Discover movies, series, and anime with Kitsu. Explore available playback sources, watch in your browser, and start synced rooms through Telegram.",
   openGraph: {
     type: "website",
     siteName: "Kitsu",
-    title: "Kitsu · Find it. Resolve it. Watch it together.",
+    title: "Kitsu | Discover something. Watch together.",
     description:
-      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+      "Discover movies, series, and anime. Explore available playback sources and watch in sync through Telegram.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kitsu · Find it. Resolve it. Watch it together.",
+    title: "Kitsu | Discover something. Watch together.",
     description:
-      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+      "Discover movies, series, and anime. Explore available playback sources and watch in sync through Telegram.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#090909",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -46,20 +56,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${inter.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
-          <TooltipProvider>
-            <SiteHeader />
-            {children}
-          </TooltipProvider>
-        </ThemeProvider>
+        <TooltipProvider>
+          <SiteHeader />
+          {children}
+        </TooltipProvider>
         <Toaster />
-        <Script
-          src="https://telegram.org/js/telegram-web-app.js"
-          strategy="beforeInteractive"
-        />
+        <TelegramScript />
       </body>
     </html>
   );

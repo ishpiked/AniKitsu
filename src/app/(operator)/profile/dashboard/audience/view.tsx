@@ -310,7 +310,7 @@ export default function AudienceView({
       : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="operator-page flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Audience</h1>
@@ -415,7 +415,7 @@ export default function AudienceView({
               t: d.t,
               values: { active: d.active },
             }))}
-            series={[{ key: "active", label: "Active users", color: "#0ea5e9" }]}
+            series={[{ key: "active", label: "Active users", color: "#e5e5e5" }]}
             formatY={(v) => String(Math.round(v))}
             tickMode="date"
             brush
@@ -448,9 +448,9 @@ export default function AudienceView({
               },
             }))}
             series={[
-              { key: "user_joins", label: "User joins", color: "#10b981" },
+              { key: "user_joins", label: "User joins", color: "#d4d4d4" },
               { key: "user_leaves", label: "User leaves", color: "#f43f5e" },
-              { key: "group_joins", label: "Group joins", color: "#0ea5e9" },
+              { key: "group_joins", label: "Group joins", color: "#737373" },
               { key: "group_leaves", label: "Group leaves", color: "#f59e0b" },
             ]}
             formatY={(v) => String(Math.round(v))}

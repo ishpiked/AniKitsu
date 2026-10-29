@@ -15,7 +15,7 @@ export default async function LoginPage() {
   const botUsername = process.env.KITSU_TELEGRAM_BOT_USERNAME ?? "AniKitsuBot";
 
   return (
-    <main className="flex min-h-svh items-center justify-center px-4 py-12">
+    <main className="login-page flex min-h-svh items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md rounded-3xl shadow-sm">
         <CardHeader className="items-center text-center">
           <Logo className="size-12" />

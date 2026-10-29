@@ -85,7 +85,7 @@ export default function HealthView({
   const history = monitoring.data?.history ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="operator-page flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -104,6 +104,7 @@ export default function HealthView({
           onRefresh={refreshAll}
           updatedAt={monitoring.updatedAt}
           live={monitoring.error === null}
+          refreshing={monitoring.refreshing}
         />
       </div>
 
@@ -171,8 +172,8 @@ export default function HealthView({
                 values: { mean: p.mean, p95: p.p95 },
               }))}
               series={[
-                { key: "mean", label: "Mean", color: "#0ea5e9" },
-                { key: "p95", label: "p95", color: "#8b5cf6" },
+                { key: "mean", label: "Mean", color: "#e5e5e5" },
+                { key: "p95", label: "p95", color: "#737373" },
               ]}
               formatY={(v) => `${Math.round(v)} ms`}
               brush
@@ -209,7 +210,7 @@ export default function HealthView({
                   {
                     key: "latency",
                     label: "getMe round trip",
-                    color: "#10b981",
+                    color: "#a3a3a3",
                   },
                 ]}
                 formatY={(v) => `${Math.round(v)} ms`}

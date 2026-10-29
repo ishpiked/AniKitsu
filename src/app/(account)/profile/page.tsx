@@ -57,7 +57,7 @@ export default async function ProfilePage() {
     .toUpperCase();
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-24 pb-14 sm:px-6">
+    <main className="profile-page mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-24 pb-14 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar size="lg" className="size-16 ring-1 ring-border">

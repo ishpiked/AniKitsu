@@ -173,7 +173,7 @@ export default function FaqPage() {
   const total = groups.reduce((n, g) => n + g.items.length, 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
+    <div className="faq-page mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
       <div className="flex flex-col items-start gap-4">
         <Badge variant="secondary">Help</Badge>
         <h1 className="max-w-3xl text-balance text-3xl font-semibold tracking-tight md:text-5xl">

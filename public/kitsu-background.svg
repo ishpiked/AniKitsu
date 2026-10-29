@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#111111"/>
+      <stop offset=".52" stop-color="#090909"/>
+      <stop offset="1" stop-color="#0d0d0d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="52%" cy="34%" r="74%">
+      <stop stop-color="#c5c5c5" stop-opacity=".075"/>
+      <stop offset="1" stop-color="#c5c5c5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1200" fill="url(#base)"/>
+  <rect width="1600" height="1200" fill="url(#glow)"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M-250 30C60 94 222 238 174 414s115 202 365 138" stroke="#a1a1a1" stroke-opacity=".14" stroke-width="210"/>
+    <path d="M1110-185C914 36 916 178 1128 193s353-31 390 163 109 259 340 353" stroke="#000000" stroke-opacity=".64" stroke-width="220"/>
+    <path d="M-225 900C12 712 244 696 357 852s-36 278-222 399 79 238 376 158" stroke="#888888" stroke-opacity=".115" stroke-width="230"/>
+    <path d="M1020 1390C840 1172 934 987 1164 907s267-170 352-30 149 238 312 157" stroke="#000000" stroke-opacity=".68" stroke-width="225"/>
+    <path d="M515-160C422 34 492 168 660 189s231-75 317 32 41 226-95 325" stroke="#707070" stroke-opacity=".065" stroke-width="116"/>
+  </g>
+</svg>

@@ -45,14 +45,14 @@ function BlogLoading() {
 export default async function BlogPage() {
   const account = await currentAccount();
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-7 px-4 pt-24 pb-14 sm:px-6 md:gap-9">
-      <header className="relative isolate overflow-hidden rounded-3xl border bg-gradient-to-br from-violet-500/[0.11] via-card to-card px-6 py-8 shadow-sm sm:px-10 sm:py-10">
+    <main className="blog-page mx-auto flex w-full max-w-5xl flex-1 flex-col gap-7 px-4 pt-24 pb-14 sm:px-6 md:gap-9">
+      <header className="relative isolate overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/[0.11] via-card to-card px-6 py-8 shadow-sm sm:px-10 sm:py-10">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-20 -top-24 -z-10 size-72 rounded-full bg-fuchsia-400/15 blur-3xl"
         />
         <div className="flex max-w-3xl flex-col items-start gap-3">
-          <p className="rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">
+          <p className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary dark:text-primary">
             Announcements & notes
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">

@@ -49,7 +49,7 @@ export function OptionDropdown({
           aria-controls={listboxId}
           aria-label={label}
           className={cn(
-            "flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-all duration-150",
+            "flex h-9 items-center gap-2 rounded-md border border-border/80 bg-card px-3 text-[13px] font-medium transition-colors duration-150",
             "hover:border-foreground/20 hover:bg-muted/50",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-50",
@@ -71,7 +71,7 @@ export function OptionDropdown({
           />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-1.5">
+      <PopoverContent align="start" className="w-64 rounded-lg border-border/80 p-1.5 shadow-xl shadow-black/30">
         <div id={listboxId} role="listbox" aria-label={label} className="flex flex-col gap-0.5">
           {options.map((o) => {
             const active = o.value === value;

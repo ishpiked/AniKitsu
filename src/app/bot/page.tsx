@@ -118,7 +118,7 @@ const COMMAND_GROUPS: CatalogGroup[] = [
 
 export default function BotPage() {
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
+    <div className="bot-page mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-16 pb-12 md:px-8">
       {/* hero */}
       <div className="flex flex-col items-start gap-5">
         <span className="flex size-12 items-center justify-center rounded-xl border bg-muted">

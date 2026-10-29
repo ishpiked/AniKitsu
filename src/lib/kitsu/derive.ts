@@ -396,11 +396,12 @@ export function formatUtc(iso: string | null | undefined): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
 }
 
-export function formatAgo(iso: string | null | undefined, now = Date.now()): string {
+export function formatAgo(iso: string | null | undefined, now?: number): string {
+  const reference = now ?? (Math.floor(Date.now() / 60_000) * 60_000);
   if (!iso) return "—";
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return "—";
-  const s = Math.max(0, Math.floor((now - t) / 1000));
+  const s = Math.max(0, Math.floor((reference - t) / 1000));
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m} min ago`;

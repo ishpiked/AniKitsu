@@ -1,20 +1,33 @@
 import { siteUrl } from "@/lib/site";
 import LandingView from "@/components/landing";
+import {
+  DEFAULT_HISTORY_HOURS,
+  getMonitoring,
+  sanitizePublicStatus,
+} from "@/lib/kitsu/client";
 
 export const metadata = {
-  title: "Kitsu · Find it. Resolve it. Watch it together.",
+  title: "Kitsu Live | Service overview",
   description:
-    "Kitsu is a Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+    "Live health, uptime, and latency monitoring for Kitsu services, Telegram bots, and providers.",
 };
 
-export default function Home() {
+export default async function Home() {
+  let data = null;
+  let error: string | null = null;
+  try {
+    data = sanitizePublicStatus(await getMonitoring(DEFAULT_HISTORY_HOURS));
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Request failed.";
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Kitsu",
+    name: "Kitsu Live",
     url: siteUrl(),
     description:
-      "Telegram-native title discovery and streaming engine with synced Watch Together rooms.",
+      "Live health, uptime, and latency monitoring for Kitsu services, Telegram bots, and providers.",
   };
 
   return (
@@ -23,7 +36,10 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingView stats={null} />
+      <LandingView
+        initialHours={DEFAULT_HISTORY_HOURS}
+        initialStatus={{ data, error }}
+      />
     </>
   );
 }

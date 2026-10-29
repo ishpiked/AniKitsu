@@ -8,6 +8,7 @@ export interface KitsuFetch<T> {
   /** Machine-readable BFF error kind (e.g. admin not-configured/forbidden). */
   errorCode: string | null;
   loading: boolean;
+  refreshing: boolean;
   updatedAt: number | null;
   sessionExpired: boolean;
   refresh: () => void;
@@ -73,6 +74,7 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
   const [loading, setLoading] = React.useState(
     initialData === undefined && initialError == null
   );
+  const [refreshing, setRefreshing] = React.useState(false);
   const [updatedAt, setUpdatedAt] = React.useState<number | null>(
     initialAt ?? null
   );
@@ -94,6 +96,7 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
     const url = qs ? `${base}/${path}?${qs}` : `${base}/${path}`;
 
     async function load() {
+      setRefreshing(true);
       try {
         const res = await fetch(url, { cache: "no-store" });
         if (cancelled) return;
@@ -103,6 +106,7 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
           setError(details.message);
           setErrorCode(details.code);
           setLoading(false);
+          setRefreshing(false);
           return;
         }
         const json = (await res.json()) as T;
@@ -112,11 +116,13 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
         setSessionExpired(false);
         setUpdatedAt(Date.now());
         setLoading(false);
+        setRefreshing(false);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Network request failed.");
         setErrorCode(null);
         setLoading(false);
+        setRefreshing(false);
       }
     }
 
@@ -136,5 +142,5 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
     return () => window.clearInterval(id);
   }, [paused, refreshMs, refresh]);
 
-  return { data, error, errorCode, loading, updatedAt, sessionExpired, refresh };
+  return { data, error, errorCode, loading, refreshing, updatedAt, sessionExpired, refresh };
 }
