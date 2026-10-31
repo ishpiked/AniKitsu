@@ -70,6 +70,11 @@ deployment. Set `NEXT_PUBLIC_BACKEND_URL` on the player and `KITSU_API_URL` on
 the dashboard to the same stable backend API origin. Do not point either
 deployment at the other Vercel app as its API.
 
+The dashboard also hosts the authenticated WeCollege relay at
+`/api/stream-relay`. Its function runs in Mumbai, and the backend uses the
+existing `OWNER_API_TOKEN` for authentication. Keep that value matched to
+`KITSU_OWNER_API_TOKEN` in the dashboard deployment.
+
 - **Overview**: overall Operational / Degraded / Down / Unknown verdict with
   reasons, plus API, bot, provider, traffic, audience, and history cards.
 - **Service Health**: availability timelines, uptime with observed and
