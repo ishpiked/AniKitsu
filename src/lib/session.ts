@@ -80,7 +80,7 @@ function validSession(value: unknown): value is AccountSession {
     !Number.isSafeInteger(requests.total) ||
     !Number.isSafeInteger(profile.watchSeconds) ||
     !Array.isArray(profile.recentWatches) ||
-    profile.recentWatches.length > 4 ||
+    profile.recentWatches.length > 5 ||
     (profile.firstSeen !== null && typeof profile.firstSeen !== "string") ||
     (profile.lastActive !== null && typeof profile.lastActive !== "string")
   ) {

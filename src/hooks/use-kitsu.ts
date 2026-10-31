@@ -80,10 +80,17 @@ export function useKitsu<T>(path: string, opts: Options<T> = {}): KitsuFetch<T> 
   );
   const [sessionExpired, setSessionExpired] = React.useState(false);
   const [tick, setTick] = React.useState(0);
+  const skipInitialFetch = React.useRef(
+    initialData !== undefined && initialError == null
+  );
 
   const refresh = React.useCallback(() => setTick((t) => t + 1), []);
 
   React.useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     let cancelled = false;
     const search = new URLSearchParams();
     if (hours !== undefined) search.set("hours", String(hours));

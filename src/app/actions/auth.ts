@@ -88,7 +88,10 @@ async function exchangeTelegramLogin(
         cache: "no-store",
         signal: AbortSignal.timeout(8_000),
         headers: { accept: "application/json", "content-type": "application/json" },
-        body: JSON.stringify(identity),
+        body: JSON.stringify({
+          ...identity,
+          include_daily_watch_time: false,
+        }),
       },
     );
   } catch {
@@ -131,7 +134,7 @@ async function exchangeTelegramLogin(
     typeof personal.available !== "boolean" ||
     !watchRequests ||
     !recentWatches ||
-    recentWatches.length > 4 ||
+    recentWatches.length > 5 ||
     !Number.isSafeInteger(personal.watch_seconds) ||
     Number(personal.watch_seconds) < 0 ||
     !Number.isSafeInteger(watchRequests.movies) ||
