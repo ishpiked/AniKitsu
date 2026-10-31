@@ -29,8 +29,8 @@ everything around it.
   tools, locks, autoplay, scheduling, room chat, and inline personal rooms.
 - **Inline mode**: search from any chat and insert result cards with Watch
   and Share actions.
-- **Personal library**: watch history, personal stats, opt-in title alerts.
-- **Extras**: title quiz, feedback, donations via Telegram Stars.
+- **Personal library**: watch history, personal stats, opt-in title alerts, and automatic monthly and yearly wrap cards.
+- **Extras**: feedback and donations via Telegram Stars.
 - **Owner tools**: service stats, provider health checks, sessions, activity
   inspection, moderation, maintenance, and broadcasts (owner ID only).
 

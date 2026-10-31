@@ -18,7 +18,7 @@ export const CATALOG_GROUPS: { id: CatalogGroup; label: string }[] = [
   { id: "player", label: "Player controls & subtitles" },
   { id: "library", label: "Library & recommendations" },
   { id: "party", label: "Watch Together" },
-  { id: "extras", label: "Alerts, quiz & support" },
+  { id: "extras", label: "Alerts & support" },
   { id: "operator", label: "Owner & operator tools" },
 ];
 
@@ -57,6 +57,8 @@ export const CATALOG: CatalogEntry[] = [
   // --- Library ---
   { id: "track", command: "/track", title: "Watch history & resume points", group: "library", where: "Telegram", who: "Any user", requires: "Recorded playback activity", limits: "Resume state is stored per user, title, season, and episode." },
   { id: "mystats", command: "/mystats", title: "Personal watch stats", group: "library", where: "Telegram", who: "Any user", requires: "Heartbeat-measured watch time", limits: "Measured playback activity, not proof every credited second was watched." },
+  { id: "wrap", command: "/wrap", title: "All time watch wrap", group: "library", where: "Telegram private chat", who: "Any user", requires: "Recorded watch activity", limits: "Creates a private card using the saved player palette." },
+  { id: "scheduled-wraps", command: null, title: "Monthly and yearly watch wraps", group: "library", where: "Telegram", who: "Active users with playback history", requires: "Recorded watch time during the reporting period", limits: "Sent automatically after each period closes." },
   { id: "alerts", command: "/alerts", title: "Daily title alerts", group: "library", where: "Telegram", who: "Opted-in users", requires: "Explicit opt-in; missing preference means disabled", limits: "Announces catalog changes such as top picks and premieres." },
   { id: "settings", command: "/settings", title: "Playback preferences", group: "library", where: "Telegram", who: "Any user", requires: null, limits: "Default server, quality, and subtitle preferences apply where supported." },
   // --- Watch Together ---
@@ -68,7 +70,6 @@ export const CATALOG: CatalogEntry[] = [
   { id: "queue", command: "/skip · /autoplay · /schedule", title: "Queue, autoplay & scheduling", group: "party", where: "Telegram + player", who: "Participants within host permissions", requires: null, limits: "Scheduled sessions depend on the party scheduler." },
   { id: "roomchat", command: null, title: "Room chat & state display", group: "party", where: "Player", who: "Room participants", requires: "An active room", limits: "The player shows room state, participants, and chat; join/leave notices may also appear in the originating group." },
   // --- Extras ---
-  { id: "quiz", command: "/quiz", title: "Title quiz", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: null },
   { id: "feedback", command: "/feedback", title: "Send feedback", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: "Routed to Kitsu support." },
   { id: "donate", command: "/donate", title: "Donate with Telegram Stars", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: null },
   { id: "ping", command: "/ping", title: "Telegram API latency check", group: "extras", where: "Telegram", who: "Any user", requires: null, limits: "Measures bot-to-Telegram round trip only." },

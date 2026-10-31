@@ -102,7 +102,7 @@ const guideSections = [
   {
     title: "6. Alerts, help, and other buttons",
     paragraphs: [
-      "Use /alerts to turn daily title alerts on or off. Alerts are opt-in; Kitsu does not enable them just because you opened the bot. /quiz starts a title quiz, /feedback sends a note to Kitsu support, /donate opens the optional Telegram Stars donation flow, and /ping checks the bot's connection to Telegram.",
+      "Use /alerts to manage title updates for your list. Alerts are opt-in; Kitsu does not enable them just because you opened the bot. Kitsu also sends a personal wrap each month and year when you have recorded watch time. Send /wrap in a private chat for your all time card. /feedback sends a note to Kitsu support, /donate opens the optional Telegram Stars donation flow, and /ping checks the bot's connection to Telegram.",
       "Use /share after Kitsu has prepared a player link. Treat links like keys: who can open one depends on how it was created. For help at any time, use /help or return to this guide.",
       "A title can be missing or fail to play when catalog metadata is incomplete, an episode has not aired, or an upstream provider is unavailable. Try another title spelling, check the release date, or try again later. If the problem continues, use /feedback and include what you tapped and what happened.",
     ],
