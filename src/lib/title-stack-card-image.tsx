@@ -135,23 +135,6 @@ function PosterStack({ titles }: { titles: TitleStackCardTitle[] }) {
           K
         </div>
       ) : null}
-      <div
-        style={{
-          display: "flex",
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          padding: "9px 13px",
-          borderRadius: 8,
-          backgroundColor: COLORS.accent,
-          color: COLORS.text,
-          fontSize: 14,
-          fontWeight: 700,
-          letterSpacing: 1,
-        }}
-      >
-        {stackTitles.length} POSTERS IN THE MIX
-      </div>
     </div>
   );
 }
