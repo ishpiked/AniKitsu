@@ -9,7 +9,7 @@ import { requireOwner } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Owner dashboard · Kitsu",
-  description: "Operator dashboard for the Kitsu Telegram streaming product.",
+  description: "Operator dashboard for Kitsu service monitoring, accounts, and audience insights.",
   robots: { index: false, follow: false },
 };
 

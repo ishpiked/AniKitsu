@@ -7,7 +7,7 @@ import StatusView from "./view";
 
 export const metadata = {
   title: "Status · Kitsu",
-  description: "Public Kitsu service status: API, Telegram bot, and providers.",
+  description: "Public Kitsu service status: API and Telegram bot.",
 };
 
 export default async function StatusPage({

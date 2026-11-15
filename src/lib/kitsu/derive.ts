@@ -13,7 +13,7 @@ export interface OverallVerdict {
 
 /**
  * Derive the overall state from one snapshot. Never derive health solely
- * from /health: API, bot probe, inventory, and provider states all count.
+ * from /health: both the API and the bot probe count.
  */
 export function overallState(current: MonitoringSnapshot): OverallVerdict {
   const reasons: string[] = [];
@@ -29,34 +29,23 @@ export function overallState(current: MonitoringSnapshot): OverallVerdict {
     };
   }
 
-  const degraded: string[] = [];
   const botStatus = current.bot?.status ?? null;
-  if (botStatus === "down") degraded.push("Telegram bot probe is down.");
-  else if (botStatus === "disabled")
+  if (botStatus === "down") {
+    return { state: "degraded", reasons: ["Telegram bot probe is down."] };
+  }
+  if (botStatus === "disabled") {
     reasons.push("Telegram bot is not configured (no BOT_TOKEN).");
-  else if (botStatus !== "up")
-    degraded.push("Telegram bot probe returned no data.");
-
-  if (
-    current.server_inventory_status !== null &&
-    current.server_inventory_status !== "up"
-  ) {
-    degraded.push("Provider inventory fetch failed.");
+    reasons.push("API reports up.");
+    return { state: "operational", reasons };
+  }
+  if (botStatus !== "up") {
+    return {
+      state: "degraded",
+      reasons: ["Telegram bot probe returned no data."],
+    };
   }
 
-  const entries = Object.entries(current.servers ?? {});
-  const down = entries.filter(([, s]) => s.status === "down").map(([n]) => n);
-  const unknown = entries
-    .filter(([, s]) => s.status === null || s.status === undefined)
-    .map(([n]) => n);
-  if (down.length > 0) degraded.push(`Providers down: ${down.join(", ")}.`);
-  if (unknown.length > 0)
-    degraded.push(`Providers with no data: ${unknown.join(", ")}.`);
-
-  if (degraded.length > 0) return { state: "degraded", reasons: degraded };
-  if (entries.length === 0)
-    return { state: "unknown", reasons: ["Snapshot carries no provider data."] };
-  reasons.push("API, bot probe, inventory, and all providers report up.");
+  reasons.push("API and Telegram bot probe report up.");
   return { state: "operational", reasons };
 }
 
@@ -84,27 +73,6 @@ export function statusView(status: string | null | undefined): StatusView {
     default:
       return { label: status, tone: "warn" };
   }
-}
-
-export interface ProviderCounts {
-  total: number;
-  up: number;
-  down: number;
-  unknown: number;
-  stale: number;
-}
-
-export function providerCounts(
-  servers: MonitoringSnapshot["servers"]
-): ProviderCounts {
-  const entries = Object.values(servers ?? {});
-  return {
-    total: entries.length,
-    up: entries.filter((s) => s.status === "up").length,
-    down: entries.filter((s) => s.status === "down").length,
-    unknown: entries.filter((s) => s.status == null).length,
-    stale: entries.filter((s) => s.stale === true).length,
-  };
 }
 
 // --- Time-series extraction (one history fetch → all charts) ---
@@ -149,50 +117,32 @@ export function botLatencySeries(
   }));
 }
 
-export interface ProviderLatencyPoint {
-  t: string;
-  latency: number | null;
-  stale: boolean;
-}
-
-export function providerLatencySeries(
-  history: MonitoringSnapshot[],
-  name: string
-): ProviderLatencyPoint[] {
-  return history.map((s) => {
-    const sample = s.servers?.[name];
-    return {
-      t: s.timestamp,
-      // Stale reuses keep their value but are flagged so charts can mark
-      // them as stale instead of plotting them as fresh measurements.
-      latency: sample?.latency_ms ?? null,
-      stale: sample?.stale === true,
-    };
-  });
-}
-
-/** Health transitions across a history, latest first, capped. */
+/** Health transitions for the API and bot across a history, latest first. */
 export function computeTransitions(
   history: MonitoringSnapshot[],
-  names?: string[],
   limit = 500
 ): StateChange[] {
-  const set = new Set<string>(names ?? []);
-  if (!names) {
-    for (const snap of history) {
-      for (const name of Object.keys(snap.servers ?? {})) set.add(name);
-    }
-  }
-  const ordered = [...set].sort();
+  const services: {
+    name: string;
+    pick: (snapshot: MonitoringSnapshot) => string | null;
+  }[] = [
+    { name: "API", pick: (snapshot) => snapshot.api?.status ?? null },
+    { name: "Telegram bot", pick: (snapshot) => snapshot.bot?.status ?? null },
+  ];
   const changes: StateChange[] = [];
   const last: Record<string, string | null | undefined> = {};
   for (const snap of history) {
-    for (const name of ordered) {
-      const status = snap.servers?.[name]?.status ?? null;
-      if (name in last && last[name] !== status) {
-        changes.push({ t: snap.timestamp, name, from: last[name] ?? null, to: status });
+    for (const service of services) {
+      const status = service.pick(snap);
+      if (service.name in last && last[service.name] !== status) {
+        changes.push({
+          t: snap.timestamp,
+          name: service.name,
+          from: last[service.name] ?? null,
+          to: status,
+        });
       }
-      last[name] = status;
+      last[service.name] = status;
     }
   }
   return changes.reverse().slice(0, limit);

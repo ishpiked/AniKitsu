@@ -20,42 +20,42 @@ const sections = [
   {
     n: "1",
     title: "What we store",
-    body: "To make playback and rooms work, we keep your Telegram identity, playback preferences (server, quality, subtitles), watch history with resume points, alert opt-ins, and room participation. Operators can see aggregated counts, like total users, and recent activity needed for moderation.",
+    body: "When you sign in with Telegram, we keep your Telegram identity and an account record with membership dates. We also keep watch history that was recorded before playback was removed. No new watch activity is written now.",
   },
   {
     n: "2",
     title: "What we never store",
-    body: "We do not sell data, run ads, or use third-party analytics. We do not store payment details. Donations go through Telegram Stars, so Telegram handles that part, not us.",
+    body: "We do not sell data, run ads, or use third-party analytics. We do not store payment details, and there is no donation flow while the migration is in progress.",
   },
   {
     n: "3",
-    title: "How watching is measured",
-    body: "While you watch in the Mini App player, it sends periodic heartbeats that record watch time and your position. That is measured playback activity used for resume points and stats. It is not proof of who watched or how closely.",
+    title: "Watch history",
+    body: "Older watch history remains in the database so your profile and operator analytics stay consistent. The player, heartbeat ingestion, and resume writes are gone, so nothing new is recorded from playback.",
   },
   {
     n: "4",
-    title: "Shares and links",
-    body: "Player links you share are signed and short-lived, with server-side checks on who may open them. Anyone holding a public link can watch it, so only share links where you are comfortable with that.",
+    title: "Cookies",
+    body: "Public pages do not set tracking cookies. Signing in with Telegram sets one signed, secure session cookie for your profile. The cookie identifies your account and, for the bot owner, authorizes the private dashboard.",
   },
   {
     n: "5",
-    title: "Cookies",
-    body: "Public pages do not set tracking cookies. Signing in with Telegram sets one signed, secure session cookie for your profile. The cookie is used to identify your account and, for the bot owner, authorize the private dashboard.",
+    title: "Who else sees data",
+    body: "Telegram sees whatever you do inside Telegram, under its own policy. Search and metadata requests reach third-party catalog services. When Bedrot integration ships, media requests will reach that server under its own terms.",
   },
   {
     n: "6",
-    title: "Who else sees data",
-    body: "Streaming only works by asking third-party servers for video, so technical requests (like fetching a playlist segment) necessarily reach them. Telegram sees whatever you do inside Telegram, under Telegram's own policy. Nobody else gets your data.",
+    title: "How long we keep it",
+    body: "Account records and historical watch history persist so profiles and analytics keep working. Operational snapshots roll off on a retention window of up to 90 days when durable storage is configured. Ask the operator through Telegram for deletion.",
   },
   {
     n: "7",
-    title: "How long we keep it",
-    body: "Watch history and preferences persist so resume keeps working. Operational snapshots roll off on a retention window (currently up to 90 days when durable storage is configured). If you want your data removed, ask through /feedback and it will be handled.",
+    title: "Nothing here is ours to keep",
+    body: "Kitsu owns no movies, no shows, and no subtitles. Metadata, artwork, and any future media come from third-party services. If an upstream service removes something, it is gone here too.",
   },
   {
     n: "8",
-    title: "Nothing here is ours to keep",
-    body: "Kitsu owns no movies, no shows, and no streams. Every title, poster, and video byte comes from third-party servers and metadata providers. We are a remote control and a player shell sitting on top of them. If an upstream source goes down or removes something, it is gone here too.",
+    title: "Questions and requests",
+    body: "For a data question or deletion request, contact the operator through Telegram with the account you signed in with. Include enough detail to identify the account, and do not send secrets such as login codes.",
   },
 ];
 
@@ -68,11 +68,12 @@ export default function PrivacyPage() {
           Privacy policy
         </h1>
         <p className="max-w-2xl text-pretty text-muted-foreground md:text-lg">
-          Plain words, no legal fog. Short version: we store what playback
-          needs, nothing else, and we never sell anything.
+          Plain words, no legal fog. Short version: we store account data and
+          historical watch history, we never sell anything, and new playback is
+          no longer recorded.
         </p>
         <p className="font-mono text-xs text-muted-foreground">
-          Last updated: October 2026
+          Last updated: November 2026
         </p>
       </div>
 
@@ -100,12 +101,12 @@ export default function PrivacyPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">
-          Questions about your data? Ask through /feedback in the bot.
+          Questions about your data? Ask the operator through Telegram.
         </p>
         <span className="ml-auto flex gap-3">
           <Button variant="outline" asChild>
             <Link href="/bot">
-              Bot details
+              Bot notice
               <ArrowRight className="size-4" />
             </Link>
           </Button>

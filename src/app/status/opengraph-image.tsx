@@ -1,10 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getMonitoring } from "@/lib/kitsu/client";
-import {
-  formatPercent,
-  overallState,
-  providerCounts,
-} from "@/lib/kitsu/derive";
+import { formatPercent, overallState } from "@/lib/kitsu/derive";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -22,9 +18,8 @@ export default async function StatusOgImage() {
   try {
     const m = await getMonitoring(24);
     const verdict = overallState(m.current);
-    const counts = providerCounts(m.current.servers);
     state = verdict.state;
-    detail = `${counts.up}/${counts.total} providers up · ${formatPercent(m.uptime.api.uptime_percent)} API uptime · 24h`;
+    detail = `${formatPercent(m.uptime.api.uptime_percent)} API uptime · Telegram bot ${m.current.bot?.status ?? "no data"} · 24h`;
   } catch {
     // Fall through to the unknown card.
   }

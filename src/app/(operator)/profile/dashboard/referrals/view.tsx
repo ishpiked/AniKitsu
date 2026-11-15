@@ -85,7 +85,7 @@ export default function ReferralView() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Community growth</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Referrals</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            First-time joins, first streams, campaign sources, and the people bringing new viewers to Kitsu.
+            Referral joins, activation from recorded watch history, campaign sources, and the people bringing new accounts to Kitsu.
           </p>
         </div>
         <Button variant="outline" onClick={reload} disabled={loading}>
@@ -100,9 +100,9 @@ export default function ReferralView() {
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Referral totals">
             <KpiCard label="New users referred" value={data.totals.signups.toLocaleString()} sub="All recorded referral links" />
-            <KpiCard label="Started a stream" value={data.totals.activated.toLocaleString()} sub="At least one valid player heartbeat" />
-            <KpiCard label="Not streamed yet" value={data.totals.pending.toLocaleString()} sub="Joined through a link, no first stream yet" />
-            <KpiCard label="First-stream rate" value={`${data.totals.conversion_percent}%`} sub="Referred users who began playback" />
+            <KpiCard label="Activated" value={data.totals.activated.toLocaleString()} sub="Users with recorded watch history" />
+            <KpiCard label="Not activated" value={data.totals.pending.toLocaleString()} sub="Referred signups with no recorded watch history" />
+            <KpiCard label="Activation rate" value={`${data.totals.conversion_percent}%`} sub="Referred users with recorded watch history" />
           </section>
 
           <section className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
@@ -115,7 +115,7 @@ export default function ReferralView() {
                 {data.daily.length ? (
                   <div className="grid grid-cols-7 gap-2 sm:grid-cols-10 lg:grid-cols-15">
                     {data.daily.map((day) => (
-                      <div key={day.id} className="flex min-w-0 flex-col items-center gap-1.5" title={`${day.id}: ${day.users} joined, ${day.activated} streamed`}>
+                      <div key={day.id} className="flex min-w-0 flex-col items-center gap-1.5" title={`${day.id}: ${day.users} joined, ${day.activated} activated`}>
                         <div className="flex h-28 w-full items-end justify-center rounded-lg bg-muted/50 p-1">
                           <div className="relative w-full overflow-hidden rounded-md bg-primary/25" style={{ height: `${Math.max(4, (day.users / maxDaily) * 100)}%` }}>
                             <div className="absolute inset-x-0 bottom-0 bg-primary/80" style={{ height: `${day.users ? (day.activated / day.users) * 100 : 0}%` }} />
@@ -132,7 +132,7 @@ export default function ReferralView() {
                 )}
                 <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-primary/30" /> Joined</span>
-                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-primary/80" /> First stream</span>
+                  <span className="inline-flex items-center gap-2"><i className="size-2.5 rounded-sm bg-primary/80" /> Activated</span>
                 </div>
               </CardContent>
             </Card>
@@ -147,7 +147,7 @@ export default function ReferralView() {
                   <div key={source.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
                     <div className="min-w-0">
                       <p className="font-medium">{source.id === "creator_kit" ? "Creator Kit" : "Personal links"}</p>
-                      <p className="text-xs text-muted-foreground">{source.activated} of {source.users} began streaming</p>
+                      <p className="text-xs text-muted-foreground">{source.activated} of {source.users} activated</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary dark:text-primary">{source.users}</span>
                   </div>
@@ -173,7 +173,7 @@ export default function ReferralView() {
                         <span className="block truncate text-sm font-medium">{person.name || person.username || `User ${person.user_id}`}</span>
                         <span className="block truncate text-xs text-muted-foreground">{person.username ? `@${person.username} · ` : ""}ID {person.user_id}</span>
                       </span>
-                      <span className="hidden text-right text-xs text-muted-foreground sm:block">{person.activated} streamed</span>
+                      <span className="hidden text-right text-xs text-muted-foreground sm:block">{person.activated} activated</span>
                       <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums">{person.referrals}</span>
                     </Link>
                   ))}
@@ -182,7 +182,7 @@ export default function ReferralView() {
                 <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
                   <Users className="size-5 text-muted-foreground" />
                   <p className="text-sm font-medium">No referrals yet</p>
-                  <p className="max-w-md text-xs text-muted-foreground">Personal links and channel Creator Kit links will show here after a new user starts the bot from one.</p>
+                  <p className="max-w-md text-xs text-muted-foreground">Personal links and channel Creator Kit links will show here after a new user joins from one.</p>
                 </div>
               )}
             </CardContent>

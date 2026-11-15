@@ -6,9 +6,6 @@ import {
   Activity,
   BookOpen,
   LayoutDashboard,
-  LayoutGrid,
-  MessagesSquare,
-  Server,
   Trophy,
   Users,
 } from "@/lib/icons";
@@ -26,7 +23,6 @@ const sections = [
         exact: true,
       },
       { href: "/profile/dashboard/health", label: "Service Health", icon: Activity },
-      { href: "/profile/dashboard/providers", label: "Providers", icon: Server },
     ],
   },
   {
@@ -35,23 +31,11 @@ const sections = [
       { href: "/profile/dashboard/audience", label: "Audience", icon: Users },
       { href: "/profile/dashboard/users", label: "Users", icon: Users },
       { href: "/profile/dashboard/referrals", label: "Referrals", icon: Trophy },
-      {
-        href: "/profile/dashboard/rooms",
-        label: "Watch Together",
-        icon: MessagesSquare,
-      },
     ],
   },
   {
     label: "Explore",
-    links: [
-      { href: "/blog", label: "Blog", icon: BookOpen },
-      {
-        href: "/profile/dashboard/catalog",
-        label: "Feature Catalog",
-        icon: LayoutGrid,
-      },
-    ],
+    links: [{ href: "/blog", label: "Blog", icon: BookOpen }],
   },
 ];
 

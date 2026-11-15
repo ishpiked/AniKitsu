@@ -72,8 +72,6 @@ export default function StatusView({
   });
 
   const data = status.data;
-  const downProviders =
-    data?.providers.filter((p) => p.status === "down") ?? [];
 
   return (
     <div className="status-page mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 md:p-8">
@@ -84,7 +82,7 @@ export default function StatusView({
         <p className="text-sm text-muted-foreground">
           Public status page.{" "}
           {data
-            ? `Sampled ${formatAgo(data.probe_at ?? data.generated_at)}. Times in UTC.`
+            ? `Generated ${formatAgo(data.generated_at)}. Times in UTC.`
             : "Waiting for the first snapshot."}
         </p>
       </div>
@@ -128,7 +126,7 @@ export default function StatusView({
             </CardContent>
           </Card>
 
-          <div className="status-summary-grid grid gap-px md:grid-cols-2 xl:grid-cols-4">
+          <div className="status-summary-grid grid gap-px md:grid-cols-2">
             <Card className="status-summary-card">
               <CardHeader className="pb-2">
                 <CardDescription>API</CardDescription>
@@ -195,114 +193,7 @@ export default function StatusView({
                 ) : null}
               </CardContent>
             </Card>
-
-            <Card className="status-summary-card">
-              <CardHeader className="pb-2">
-                <CardDescription>Stream providers</CardDescription>
-                <CardTitle className="text-lg tabular-nums">
-                  {data.providers.filter((p) => p.status === "up").length}/
-                  {data.providers.length} up
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1 text-sm">
-                <p>
-                  Inventory: <StatusBadge status={data.inventory_status} />{" "}
-                  <span className="text-muted-foreground">
-                    probed {formatAgo(data.probe_at)}
-                  </span>
-                </p>
-                {downProviders.length > 0 ? (
-                  <p className="text-muted-foreground">
-                    Down: {downProviders.map((p) => p.name).join(", ")}.
-                    Availability depends on upstream services.
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No provider outages detected in the latest probe.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="status-summary-card">
-              <CardHeader className="pb-2">
-                <CardDescription>Dante · Anime streaming</CardDescription>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <StatusBadge
-                    status={data.anime_server?.status}
-                    stale={data.anime_server?.stale}
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1 text-sm">
-                <p>
-                  Playback probe:{" "}
-                  <strong className="tabular-nums">
-                    {formatMs(data.anime_server?.latency_ms ?? null)}
-                  </strong>
-                </p>
-                <p className="text-muted-foreground">
-                  Reference episode check across available anime sources.
-                </p>
-              </CardContent>
-            </Card>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Dante anime sources</CardTitle>
-              <CardDescription>
-                A healthy source confirms its playlist and first media segment
-                responded. Playback may still vary by title.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="no-scrollbar overflow-x-auto">
-              <table className="w-full min-w-120 text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Source</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
-                    <th className="py-2 pr-4 font-medium">Latency</th>
-                    <th className="py-2 font-medium">Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(data.anime_server?.providers ?? {})
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([name, sample]) => (
-                      <tr key={name} className="border-b last:border-0">
-                        <td className="py-2 pr-4 font-medium">{name}</td>
-                        <td className="py-2 pr-4">
-                          <StatusBadge
-                            status={sample.status}
-                            stale={sample.stale}
-                          />
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums">
-                          {formatMs(sample.latency_ms)}
-                        </td>
-                        <td className="py-2 text-muted-foreground">
-                          {sample.error ?? "playlist and segment responded"}
-                        </td>
-                      </tr>
-                    ))}
-                  {!data.anime_server?.providers ||
-                  Object.keys(data.anime_server.providers).length === 0 ? (
-                    <tr>
-                      <td
-                        className="py-3 text-muted-foreground"
-                        colSpan={4}
-                      >
-                        No anime playback probe has completed yet.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-              <p className="pt-3 text-xs text-muted-foreground">
-                Last checked {formatAgo(data.anime_server?.probe_at ?? null)}.
-              </p>
-            </CardContent>
-          </Card>
 
           <ChartShell
             title="API latency"
@@ -351,61 +242,12 @@ export default function StatusView({
             </ChartShell>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Providers</CardTitle>
-              <CardDescription>
-                Latest probe per provider. Stale entries reuse the previous
-                probe result.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="no-scrollbar overflow-x-auto">
-              <table className="w-full min-w-160 text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Provider</th>
-                    <th className="py-2 pr-4 font-medium">Health</th>
-                    <th className="py-2 pr-4 font-medium">Latency</th>
-                    <th className="py-2 font-medium">Uptime</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...data.providers]
-                    .sort((a, b) =>
-                      a.status === b.status
-                        ? a.name.localeCompare(b.name)
-                        : a.status === "down"
-                          ? -1
-                          : 1
-                    )
-                    .map((p) => (
-                      <tr key={p.name} className="border-b last:border-0">
-                        <td className="py-2 pr-4 font-medium">{p.name}</td>
-                        <td className="py-2 pr-4">
-                          <StatusBadge status={p.status} stale={p.stale} />
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums">
-                          {p.latency_ms === null ? "—" : `${Math.round(p.latency_ms)} ms`}
-                        </td>
-                        <td className="py-2 tabular-nums">
-                          {formatPercent(p.uptime_percent)}{" "}
-                          <span className="text-muted-foreground">
-                            ({formatPercent(p.coverage_percent)} coverage)
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
           {data.transitions.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Recent changes</CardTitle>
                 <CardDescription>
-                  Provider health transitions in range (latest first).
+                  Service health transitions in range (latest first).
                 </CardDescription>
               </CardHeader>
               <CardContent>

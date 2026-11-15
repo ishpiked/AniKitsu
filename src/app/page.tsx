@@ -9,7 +9,7 @@ import {
 export const metadata = {
   title: "Kitsu Live | Service overview",
   description:
-    "Live health, uptime, and latency monitoring for Kitsu services, Telegram bots, and providers.",
+    "Live health, uptime, and latency monitoring for the Kitsu API and Telegram bot.",
 };
 
 export default async function Home() {
@@ -27,7 +27,7 @@ export default async function Home() {
     name: "Kitsu Live",
     url: siteUrl(),
     description:
-      "Live health, uptime, and latency monitoring for Kitsu services, Telegram bots, and providers.",
+      "Live health, uptime, and latency monitoring for the Kitsu API and Telegram bot.",
   };
 
   return (

@@ -13,49 +13,39 @@ import { Separator } from "@/components/ui/separator";
 export const metadata = {
   title: "Community guidelines · Kitsu",
   description:
-    "How to act in Kitsu rooms, chats, and groups. One rule, then the details.",
+    "How to use Kitsu and its API without abusing shared resources.",
 };
 
 const sections = [
   {
     n: "1",
-    title: "Be decent to other viewers",
-    body: "No harassment, hate, threats, or spam in room chat, group notices, feedback messages, or anywhere else people can see you. Disagree about a movie all you want. Do not go after the person.",
+    title: "Be decent to other people",
+    body: "No harassment, hate, threats, or spam in messages to the operator or anywhere else people can see you. Disagree about a movie all you want. Do not go after the person.",
   },
   {
     n: "2",
-    title: "Hosts set room rules",
-    body: "Whoever starts a room runs it. Hosts and co-hosts can remove members, lock joining, and skip titles. If a host locks you out or kicks you, that is their call inside their room. Start your own room instead.",
+    title: "Go easy on shared resources",
+    body: "Search and metadata requests reach third-party services. Do not scrape the API, poll in a tight loop, or automate bulk requests. Abuse gets rate limited, then blocked.",
   },
   {
     n: "3",
-    title: "Share links responsibly",
-    body: "A share link is a key to a stream. Do not post links somewhere they will be scraped or resold, and do not use shares to pass around harmful or abusive content. Abused links get revoked.",
+    title: "Do not break the controls",
+    body: "Do not try to bypass authentication, impersonate the owner, forge session cookies, or probe endpoints you were not given. Attempts are logged and treated as abuse, not curiosity.",
   },
   {
     n: "4",
-    title: "Go easy on shared resources",
-    body: "Every search, probe, and proxied segment costs real upstream bandwidth. Do not scrape the backend, hammer resolution in a loop, or re-stream our proxy output as your own service. Automated abuse gets rate limited, then blocked.",
+    title: "Respect third-party services",
+    body: "Catalog metadata and any future Bedrot media come from outside Kitsu. Do not use Kitsu to overload those services, resell their data, or pass around harmful content.",
   },
   {
     n: "5",
-    title: "Do not break the controls",
-    body: "Do not try to bypass locks, impersonate hosts or admins, forge share tokens, or poke at endpoints you were not given. Attempts are logged and treated as abuse, not curiosity.",
+    title: "Content comes from elsewhere",
+    body: "Kitsu owns no movies, shows, artwork, or subtitles. Availability, quality, and correctness belong to the services that provide them. A missing title is not something support can fix by wanting it harder.",
   },
   {
     n: "6",
-    title: "Content comes from elsewhere",
-    body: "Kitsu owns nothing here. Titles, artwork, subtitles, and streams all come from third-party servers, so availability, quality, and correctness are theirs, not ours. A missing title or a dead source is not something support can fix by wanting it harder.",
-  },
-  {
-    n: "7",
-    title: "Moderation and bans",
-    body: "Group admins moderate their groups. Room hosts moderate their rooms. The Kitsu owner moderates the bot itself and can ban accounts for spam, abuse, or breaking these rules. Bans can be appealed exactly once through /feedback. The decision after appeal is final.",
-  },
-  {
-    n: "8",
-    title: "Reporting problems",
-    body: "See someone breaking these rules? Report it to the room host or group admin first, since they can act fastest. For bot-wide issues or ban appeals, use /feedback and include what happened, where, and when.",
+    title: "Moderation and reports",
+    body: "The Kitsu owner can ban accounts for spam, abuse, or breaking these rules. Report a problem through Telegram with what happened, where, and when. Do not send the same report repeatedly.",
   },
 ];
 
@@ -97,8 +87,8 @@ export default function GuidelinesPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">
-          The short version, once more: be kind, share sanely, go easy on
-          shared bandwidth.
+          The short version, once more: be kind, do not scrape, and respect
+          access controls.
         </p>
         <span className="ml-auto flex gap-3">
           <Button variant="outline" asChild>
@@ -106,7 +96,7 @@ export default function GuidelinesPage() {
           </Button>
           <Button asChild>
             <Link href="/bot">
-              Bot details
+              Bot notice
               <ArrowRight className="size-4" />
             </Link>
           </Button>

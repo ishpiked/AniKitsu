@@ -31,11 +31,11 @@ export default function BotOgImage() {
             lineHeight: 1.1,
           }}
         >
-          <div>The bot is</div>
-          <div>the remote control</div>
+          <div>The bot is paused</div>
+          <div>during the Bedrot move</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 28, color: "#a1a1aa" }}>
-          Search, parties, alerts, stats — all from chat
+          Polling and monitoring continue. No commands are active.
         </div>
       </div>
     ),

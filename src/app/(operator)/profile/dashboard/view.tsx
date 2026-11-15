@@ -36,7 +36,6 @@ import {
   formatUtc,
   meanLatencyMs,
   overallState,
-  providerCounts,
   requestRates,
   summarizeRequests,
   type RateSample,
@@ -337,15 +336,9 @@ export default function OverviewView({
   const loading = monitoring.loading && monitoring.data === null;
   const live = monitoring.error === null && metrics.error === null;
   const db = admin.data?.database ?? null;
-  const adminRooms = admin.data?.rooms ?? null;
 
   const current = monitoring.data?.current ?? null;
   const verdict = current ? overallState(current) : null;
-  const providers = current ? providerCounts(current.servers) : null;
-  const animeSources = Object.values(current?.anime_server?.providers ?? {});
-  const animeSourcesUp = animeSources.filter(
-    (provider) => provider.status === "up"
-  ).length;
   const meanMs = metrics.data
     ? meanLatencyMs(metrics.data.httpDurationSum, metrics.data.httpDurationCount)
     : null;
@@ -369,7 +362,8 @@ export default function OverviewView({
               Operations overview
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Service health, audience activity, and Watch Together at a glance.
+              Service health, audience activity, and account operations at a
+              glance.
             </p>
             <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground/80">
               {monitoring.data
@@ -526,8 +520,8 @@ export default function OverviewView({
                   "…"
                 )}{" "}
                 <span className="text-muted-foreground">
-                  (liveness only; proves nothing about MongoDB, polling, or
-                  providers)
+                  (liveness only; proves nothing about MongoDB or Telegram
+                  polling)
                 </span>
               </p>
             </CardContent>
@@ -573,72 +567,6 @@ export default function OverviewView({
                   <strong>{metrics.data.botEnabled ? "yes" : "no"}</strong>
                 </p>
               ) : null}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Providers</CardDescription>
-              <CardTitle className="text-lg">
-                {providers ? (
-                  <span className="tabular-nums">
-                    {providers.up}/{providers.total} up
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1 text-sm">
-              {providers ? (
-                <>
-                  <p>
-                    Down:{" "}
-                    <strong className="tabular-nums">{providers.down}</strong>{" "}
-                    · stale:{" "}
-                    <strong className="tabular-nums">{providers.stale}</strong>{" "}
-                    · no data:{" "}
-                    <strong className="tabular-nums">
-                      {providers.unknown}
-                    </strong>
-                  </p>
-                  <p>
-                    Inventory:{" "}
-                    <StatusBadge
-                      status={current.server_inventory_status}
-                    />{" "}
-                    <span className="text-muted-foreground">
-                      probed {formatAgo(current.server_probe_at)} (10-min
-                      cadence; values reused between probes)
-                    </span>
-                  </p>
-                  <Separator className="my-1" />
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">Dante · Anime streaming</p>
-                      <p className="text-muted-foreground">
-                        {formatMs(current.anime_server?.latency_ms)} playback
-                        latency · {animeSourcesUp}/{animeSources.length} sources
-                        up
-                      </p>
-                    </div>
-                    <StatusBadge
-                      status={current.anime_server?.status}
-                      stale={current.anime_server?.stale}
-                    />
-                  </div>
-                  <p>
-                    <Link
-                      href="/profile/dashboard/providers"
-                      className="font-medium underline"
-                    >
-                      Open provider detail
-                    </Link>
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">No provider data.</p>
-              )}
             </CardContent>
           </Card>
 
@@ -902,47 +830,11 @@ export default function OverviewView({
         </ChartShell>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <KpiCard
-          label="Latest sample"
-          value={
-            current ? formatUtc(current.timestamp) : "—"
-          }
-          sub={`Backend generated this view ${monitoring.data ? formatAgo(monitoring.data.generated_at) : "—"}.`}
-        />
-        {adminRooms && adminRooms.active_count !== null ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Watch Together rooms</CardDescription>
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {adminRooms.active_count}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Active rooms on this backend process
-                {adminRooms.scope ? ` (${adminRooms.scope})` : ""}.{" "}
-                <Link href="/profile/dashboard/rooms" className="font-medium underline">
-                  Open room detail
-                </Link>
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Watch Together rooms</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminState
-                code={admin.errorCode}
-                error={admin.error}
-                onRetry={admin.refresh}
-              />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <KpiCard
+        label="Latest sample"
+        value={current ? formatUtc(current.timestamp) : "—"}
+        sub={`Backend generated this view ${monitoring.data ? formatAgo(monitoring.data.generated_at) : "—"}.`}
+      />
     </div>
   );
 }

@@ -16,37 +16,10 @@ export interface BotSample {
   latency_ms: number | null;
 }
 
-export interface ProviderSample {
-  status: string | null;
-  latency_ms: number | null;
-  stale: boolean | null;
-  error?: string | null;
-}
-
-export interface AnimeProviderSample {
-  status: string | null;
-  latency_ms: number | null;
-  stale: boolean | null;
-  error: string | null;
-}
-
-export interface AnimeServerSample {
-  name: "Dante";
-  status: string | null;
-  latency_ms: number | null;
-  stale: boolean | null;
-  probe_at: string | null;
-  providers: Record<string, AnimeProviderSample>;
-}
-
 export interface MonitoringSnapshot {
   timestamp: string;
   api: ApiSample | null;
   bot: BotSample | null;
-  servers: Record<string, ProviderSample>;
-  server_probe_at: string | null;
-  server_inventory_status: string | null;
-  anime_server?: AnimeServerSample | null;
   expires_at?: string | null;
 }
 
@@ -78,7 +51,6 @@ export interface MonitoringResponse {
   uptime: {
     api: UptimeBlock<ApiSample>;
     bot: UptimeBlock<BotSample>;
-    servers: Record<string, UptimeBlock<ProviderSample>>;
   };
   history: MonitoringSnapshot[];
   /** Attached by the BFF: transitions from the full (pre-decimation) history. */
@@ -111,11 +83,6 @@ export interface AdminOverview {
   audience: {
     users: AdminAudienceTotals | null;
     groups: AdminAudienceTotals | null;
-  } | null;
-  rooms: {
-    status: string | null;
-    active_count: number | null;
-    scope?: string | null;
   } | null;
   monitoring: {
     latest_sample_at: string | null;
@@ -153,51 +120,8 @@ export interface AnalyticsResponse<TBucket> {
 export type AudienceAnalytics = AnalyticsResponse<AudienceBucket>;
 export type AlertAnalytics = AnalyticsResponse<AlertBucket>;
 
-export interface AdminRoom {
-  room_id: string;
-  origin: {
-    type: string | null;
-    moderation_ref?: string | null;
-  } | null;
-  title: {
-    media_type: string | null;
-    name: string | null;
-    season: number | null;
-    episode: number | null;
-  } | null;
-  participant_count: number | null;
-  host_present: boolean | null;
-  cohost_present: boolean | null;
-  locked: boolean | null;
-  playback: {
-    state: string | null;
-    position_seconds: number | null;
-    idle_expires_at: string | null;
-  } | null;
-}
-
-export interface AdminRoomsResponse {
-  rooms: AdminRoom[];
-  total?: number | null;
-  limit?: number | null;
-  offset?: number | null;
-  scope?: string | null;
-  generated_at?: string | null;
-}
-
 // --- Public (unauthenticated) status surface ---
 // Deliberately narrow: no audience totals, no error/sample internals.
-
-export interface PublicProviderStatus {
-  name: string;
-  status: string | null;
-  stale: boolean | null;
-  latency_ms: number | null;
-  error: string | null;
-  uptime_percent: number | null;
-  observed_samples: number | null;
-  coverage_percent: number | null;
-}
 
 export interface PublicHistoryPoint {
   t: string;
@@ -207,15 +131,6 @@ export interface PublicHistoryPoint {
     p95_latency_ms: number | null;
   };
   bot: { status: string | null; latency_ms: number | null };
-  servers: Record<
-    string,
-    { status: string | null; stale: boolean | null; latency_ms: number | null }
-  >;
-  anime_server?: {
-    status: string | null;
-    stale: boolean | null;
-    latency_ms: number | null;
-  } | null;
 }
 
 /** Uptime aggregates only — never embeds the raw `current` sample. */
@@ -245,10 +160,6 @@ export interface PublicStatus {
     latency_ms: number | null;
     uptime: PublicUptime;
   };
-  inventory_status: string | null;
-  probe_at: string | null;
-  anime_server: AnimeServerSample | null;
-  providers: PublicProviderStatus[];
   history: PublicHistoryPoint[];
   transitions: StateChange[];
 }
@@ -257,24 +168,6 @@ export interface MonitoringHistoryResponse {
   hours: number;
   sample_interval_seconds: number;
   history: MonitoringSnapshot[];
-}
-
-export interface ProviderInfo {
-  name: string;
-  status: string | null;
-  language?: string | null;
-  description?: string | null;
-  "4k"?: boolean | null;
-  protocols?: string[] | null;
-  qualities?: string[] | null;
-  capabilities?: Record<string, unknown> | null;
-  disabled?: boolean | null;
-  provider?: string | null;
-  movieOnly?: boolean | null;
-}
-
-export interface ServersResponse {
-  servers: ProviderInfo[];
 }
 
 export interface HttpCounter {

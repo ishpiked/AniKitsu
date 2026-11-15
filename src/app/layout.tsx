@@ -31,19 +31,19 @@ export const metadata: Metadata = {
     template: "%s · Kitsu",
   },
   description:
-    "Discover movies, series, and anime with Kitsu. Explore available playback sources, watch in your browser, and start synced rooms through Telegram.",
+    "Live Kitsu service health, project updates, and operator tools while the app moves to Bedrot.",
   openGraph: {
     type: "website",
     siteName: "Kitsu",
-    title: "Kitsu | Discover something. Watch together.",
+    title: "Kitsu | Service status and updates",
     description:
-      "Discover movies, series, and anime. Explore available playback sources and watch in sync through Telegram.",
+      "Live health for the Kitsu API and Telegram bot, plus project updates and operator tools.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kitsu | Discover something. Watch together.",
+    title: "Kitsu | Service status and updates",
     description:
-      "Discover movies, series, and anime. Explore available playback sources and watch in sync through Telegram.",
+      "Live health for the Kitsu API and Telegram bot, plus project updates and operator tools.",
   },
 };
 

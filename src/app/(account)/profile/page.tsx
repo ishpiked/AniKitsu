@@ -16,7 +16,7 @@ import { logoutAction } from "@/app/actions/auth";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Profile · Kitsu",
-  description: "Your Kitsu account and watch activity.",
+  description: "Your Kitsu account and historical watch activity.",
   robots: { index: false, follow: false },
 };
 
@@ -112,7 +112,7 @@ export default async function ProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            Measured from player activity
+            Recorded before playback was removed
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
@@ -151,7 +151,7 @@ export default async function ProfilePage() {
       <Card className="rounded-3xl">
         <CardHeader>
           <CardTitle>Recent watches</CardTitle>
-          <CardDescription>Your latest titles opened in Kitsu.</CardDescription>
+          <CardDescription>Watch history recorded before playback was removed.</CardDescription>
         </CardHeader>
         <CardContent>
           {recentWatches.length ? (
@@ -185,7 +185,7 @@ export default async function ProfilePage() {
             <p className="rounded-2xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
               {!profile.available
                 ? "Recent watches could not be loaded while the backend connection recovers."
-                : "Your recent watches will appear here after you use the Kitsu player."}
+                : "No watch history has been recorded for this account."}
             </p>
           )}
         </CardContent>

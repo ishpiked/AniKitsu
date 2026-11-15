@@ -5,7 +5,6 @@ import {
   adminToken,
   backendBaseUrl,
   clampHours,
-  clampInt,
   parseBucket,
   parseWindow,
   parsePrometheus,
@@ -21,7 +20,6 @@ const ALLOWED: Record<string, { upstream: string; type: "json" | "metrics" }> = 
   health: { upstream: "/health", type: "json" },
   "api/monitoring": { upstream: "/api/monitoring", type: "json" },
   "api/monitoring/history": { upstream: "/api/monitoring/history", type: "json" },
-  "api/servers": { upstream: "/api/servers", type: "json" },
   metrics: { upstream: "/metrics", type: "metrics" },
 };
 
@@ -340,11 +338,6 @@ export async function GET(
       bucket,
     });
     return proxyAdmin(`/api/admin/v1/analytics/${kind}?${query}`);
-  }
-  if (key.startsWith("api/admin/rooms")) {
-    const limit = clampInt(params.get("limit"), 1, 200, 20);
-    const offset = clampInt(params.get("offset"), 0, 10000, 0);
-    return proxyAdmin(`/api/admin/v1/rooms?limit=${limit}&offset=${offset}`);
   }
 
   // --- Public monitoring namespace (no backend auth) ---

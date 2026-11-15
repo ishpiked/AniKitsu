@@ -61,11 +61,11 @@ export default function RootOgImage() {
             lineHeight: 1.1,
           }}
         >
-          <div>Find it. Resolve it.</div>
-          <div>Watch it together.</div>
+          <div>Status, uptime,</div>
+          <div>and project updates.</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 26, color: "#a1a1aa" }}>
-          Telegram-native title discovery and streaming
+          Live health for the Kitsu API and Telegram bot
         </div>
       </Shell>
     ),

@@ -168,7 +168,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Private operator tools</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Users</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Find a Telegram account, inspect its watch activity, and trace who invited whom.
+            Find a Telegram account, inspect its historical watch activity, and trace who invited whom.
           </p>
         </div>
         <Button variant="outline" onClick={() => { setLoadingDetail(true); setLoadingReferrals(true); setDetailError(null); setReferralError(null); setRefresh((value) => value + 1); }} disabled={selectedId === null || loadingDetail}>
@@ -259,14 +259,14 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                   <Info label="First seen" value={dateText(user.first_seen)} />
                   <Info label="Last active" value={dateText(user.last_active)} />
                   <Info label="Donor" value={user.is_donor === true ? "Yes" : "No"} />
-                  <Info label="Player watch time" value={watchTime} />
+                  <Info label="Recorded watch time" value={watchTime} />
                 </CardContent>
               </Card>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <Metric label="Watch requests" value={count(watchRequests?.total)} sub={`${count(watchRequests?.movies)} movies · ${count(watchRequests?.series)} series`} />
-                <Metric label="Invited users" value={count(referralSummary?.total)} sub={`${count(referralSummary?.activated)} started streaming`} />
-                <Metric label="Pending first stream" value={count(referralSummary?.pending)} sub="Referred signups not yet activated" />
+                <Metric label="Invited users" value={count(referralSummary?.total)} sub={`${count(referralSummary?.activated)} activated`} />
+                <Metric label="Pending activation" value={count(referralSummary?.pending)} sub="Referred signups not yet activated" />
               </div>
 
               <Card className="rounded-2xl shadow-sm shadow-black/[0.025]">
@@ -285,7 +285,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
               <Card className="min-w-0 rounded-2xl shadow-sm shadow-black/[0.025]">
                 <CardHeader>
                   <CardTitle>Users invited by this account</CardTitle>
-                  <CardDescription>{count(referralSummary?.total).toLocaleString()} total · {count(referralSummary?.activated).toLocaleString()} have started streaming</CardDescription>
+                  <CardDescription>{count(referralSummary?.total).toLocaleString()} total · {count(referralSummary?.activated).toLocaleString()} activated</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loadingReferrals && referrals.length === 0 ? (
@@ -307,7 +307,7 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
                             </span>
                             <span className="text-xs text-muted-foreground">{str(person.referral_source, "personal").replaceAll("_", " ")}</span>
                             <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${person.referral_activated_at ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground"}`}>
-                              {person.referral_activated_at ? "Streamed" : "Not streamed"}
+                              {person.referral_activated_at ? "Activated" : "Not activated"}
                             </span>
                           </Link>
                         );
@@ -322,9 +322,9 @@ export default function UsersView({ initialQuery }: { initialQuery: string }) {
 
               <div className="grid min-w-0 gap-4 lg:grid-cols-2">
                 <Card className="min-w-0 rounded-2xl shadow-sm shadow-black/[0.025]">
-                  <CardHeader><CardTitle>Recent watches</CardTitle><CardDescription>Resume activity recorded by the player.</CardDescription></CardHeader>
+                  <CardHeader><CardTitle>Recent watches</CardTitle><CardDescription>Watch history recorded before playback was removed.</CardDescription></CardHeader>
                   <CardContent>
-                    {watches.length ? <div className="divide-y rounded-xl border">{watches.slice(0, 8).map((watch, index) => <div key={`${String(watch.imdb)}-${String(watch.episode)}-${index}`} className="flex items-start gap-3 px-3 py-3"><Activity className="mt-0.5 size-4 shrink-0 text-primary" /><span className="min-w-0"><span className="block truncate text-sm font-medium">{str(watch.title)}</span><span className="block text-xs text-muted-foreground">{str(watch.media_type)}{watch.episode ? ` · S${String(watch.season)} E${String(watch.episode)}` : ""} · {dateText(watch.updated_at)}</span></span></div>)}</div> : <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No player resume points recorded.</p>}
+                    {watches.length ? <div className="divide-y rounded-xl border">{watches.slice(0, 8).map((watch, index) => <div key={`${String(watch.imdb)}-${String(watch.episode)}-${index}`} className="flex items-start gap-3 px-3 py-3"><Activity className="mt-0.5 size-4 shrink-0 text-primary" /><span className="min-w-0"><span className="block truncate text-sm font-medium">{str(watch.title)}</span><span className="block text-xs text-muted-foreground">{str(watch.media_type)}{watch.episode ? ` · S${String(watch.season)} E${String(watch.episode)}` : ""} · {dateText(watch.updated_at)}</span></span></div>)}</div> : <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No watch history recorded.</p>}
                   </CardContent>
                 </Card>
                 <Card className="min-w-0 rounded-2xl shadow-sm shadow-black/[0.025]">

@@ -1,134 +1,90 @@
 # Kitsu Web
 
-Web surfaces for **Kitsu**, a Telegram-native title discovery and streaming
-product: search once, race every provider for the best playable source, then
-watch in the browser or inside Telegram, solo or in a synced room.
+Operator and status surfaces for Kitsu while its media path moves to Bedrot.
+The old streaming stack is gone. Search, metadata, accounts, the blog, and
+service monitoring remain.
 
 ## What lives here
 
-| Surface | Route | Access |
-|---|---|---|
-| Landing | `/` | Public |
-| Service status | `/status` | Public, unauthenticated sanitized snapshot |
-| Blog | `/blog` | Public reading; owner-only writing |
-| Bot guide | `/bot` | Public command reference |
-| Profile | `/profile` | Telegram verified personal account |
-| Owner dashboard | `/profile/dashboard` | Bot owner account only |
-| Sign in | `/login` | Telegram account sign-in |
+- `/`: public service overview with live API and Telegram bot health.
+- `/status`: public status page with latency, uptime, coverage, and transitions.
+- `/blog`: public reading, with writing available to the owner.
+- `/bot`: migration notice for the paused Telegram bot.
+- `/profile`: personal Telegram account and historical watch activity.
+- `/profile/dashboard`: private owner dashboard.
+- `/login`: Telegram account sign in.
 
-## The Telegram bot
+## Current state
 
-The bot is the remote control. The player handles watching; the bot handles
-everything around it.
+The backend keeps catalog search, title and anime metadata, Telegram account
+verification, accounts, blog storage, monitoring, and the owner and admin APIs.
+Provider discovery, source resolution, the media proxy, share links, the
+player, watch heartbeats, rooms, party state, and room chat were removed.
 
-- **Discovery**: title search, trending picks, recommendations from watch
-  history, next-episode suggestions, and resume points.
-- **Playback setup**: season and episode pickers, provider selection with
-  bounded automatic fallback, quality and subtitle preferences.
-- **Watch Together**: synced pause, play, and seek with host and co-host
-  tools, locks, autoplay, scheduling, room chat, and inline personal rooms.
-- **Inline mode**: search from any chat and insert result cards with Watch
-  and Share actions.
-- **Personal library**: watch history, personal stats, opt-in title alerts, and automatic monthly and yearly wrap cards.
-- **Extras**: feedback and donations via Telegram Stars.
-- **Owner tools**: service stats, provider health checks, sessions, activity
-  inspection, moderation, maintenance, and broadcasts (owner ID only).
+The Telegram bot is a polling shell with no command, message, callback, or
+inline handlers. It stays online so the status page can probe the Telegram
+connection. A new interaction design will replace the removed commands.
 
-A full command-by-command reference lives in the owner feature catalog
-(`/profile/dashboard/catalog`) and in summarized form on `/bot`.
+The separate player deployment is also gone. The player web app is now a
+branded holding page that points to Bedrot while integration continues.
 
 ## Profile and owner dashboard
 
-Users see their account details, watch activity, and recent titles at
-`/profile`. When opened inside Telegram, the page signs them in automatically
-with Telegram's signed Web App data. Browser visitors can use the Telegram Login
-Widget. The backend verifies both methods with the existing bot token, and
-Kitsu stores the verified identity in a signed HTTP only session cookie. The
-bot owner sees an additional service dashboard at `/profile/dashboard`. Owner
-pages and data are checked on the server.
+Users see their Telegram identity, membership dates, and watch history that
+was recorded before playback was removed. When opened inside Telegram, the page
+signs them in with signed Web App data. Browser visitors can use the Telegram
+Login Widget. The backend verifies both methods with the bot token, and Kitsu
+stores the verified identity in a signed, HTTP only session cookie.
 
-Dashboard and blog data requests go through Kitsu server routes to the
-configured FastAPI backend. The browser talks to the same-origin Kitsu routes;
-owner credentials remain server-side. The backend address must be stable.
-Temporary tunnel addresses can expire and cause DNS errors.
+The owner dashboard covers the overview, service health, audience, users,
+referrals, and blog. Provider inventory, room control, and the feature catalog
+are gone. Owner pages and data are checked on the server.
 
-## Deployment links and data flow
+Dashboard and blog requests go through Kitsu server routes to the configured
+FastAPI backend. The browser talks to same-origin Kitsu routes, and owner
+credentials stay on the server. The backend address must be stable. Temporary
+tunnel addresses can expire and cause DNS errors.
 
-The player and dashboard are separate Vercel deployments with separate
-Telegram Mini App links:
+## Deployment and data flow
 
-- Player: `https://anikitsu.vercel.app/` and `https://t.me/AniKitsuBot/play`.
-  The `Frontend` deployment calls the FastAPI backend from the browser using
-  `NEXT_PUBLIC_BACKEND_URL`.
-- Dashboard: `https://kitsubot.vercel.app/` and
-  `https://t.me/AniKitsuBot/status`. This `Kitsu` deployment uses
-  `KITSU_API_URL` in its server routes to fetch dashboard and blog data from
-  the same FastAPI backend. Owner credentials stay on the server.
+This repository deploys one Next.js app: the dashboard and public site at
+`https://kitsubot.vercel.app/`. It uses `KITSU_API_URL` in its server routes to
+fetch status, owner, admin, and blog data from the FastAPI backend.
 
-Set `NEXT_PUBLIC_SITE_URL=https://kitsubot.vercel.app` on the dashboard
-deployment. Set `NEXT_PUBLIC_BACKEND_URL` on the player and `KITSU_API_URL` on
-the dashboard to the same stable backend API origin. Do not point either
-deployment at the other Vercel app as its API.
+Set `NEXT_PUBLIC_SITE_URL=https://kitsubot.vercel.app` for canonical links,
+Open Graph images, the sitemap, and structured data. Keep
+`KITSU_OWNER_API_TOKEN` matched to the backend's `OWNER_API_TOKEN`. Do not point
+this app at another Vercel deployment as its API.
 
-The dashboard also hosts the authenticated WeCollege relay at
-`/api/stream-relay`. Its function runs in Mumbai, and the backend uses the
-existing `OWNER_API_TOKEN` for authentication. Keep that value matched to
-`KITSU_OWNER_API_TOKEN` in the dashboard deployment.
+The former WeCollege relay at `/api/stream-relay` was removed.
 
-- **Overview**: overall Operational / Degraded / Down / Unknown verdict with
-  reasons, plus API, bot, provider, traffic, audience, and history cards.
-- **Service Health**: availability timelines, uptime with observed and
-  coverage counts, latency mean and p95, error bars, bot probe latency.
-- **Providers**: per-server health with stale flags, latency series with
-  stale samples marked, and a state-change log.
-- **Audience**: DAU/WAU/MAU buckets, joins and leaves, heartbeat watch-time splits, and alert audience from the protected admin analytics, plus eligibility totals kept distinct from activity counts.
-- **Watch Together**: live room summaries from the read-only admin rooms endpoint (process-local scope), with locked, presence, and playback state.
-- **Feature Catalog**: searchable catalog of every bot capability.
+## Blog
 
-Charts show UTC timestamps, keep gaps for missing samples, and never render
-failures as zeros. Ranges from 1 hour to 90 days; history payloads are
-decimated server-side for transfer speed.
+The blog combines channel posts that were mirrored before the bot became
+handler-free with posts written in the owner dashboard. New channel posts are
+not mirrored while the bot registers no handlers. Older posts stay readable.
 
-## Blog (`/blog`)
-
-The blog combines posts from the configured Telegram updates channel with
-notes written in the dashboard by the bot owner. The backend bot must be an
-administrator in that channel, `UPDATES_CHANNEL_ID` must identify it, and
-MongoDB must be configured. New channel posts and edits are mirrored while the
-bot is receiving Telegram updates; older channel posts are not imported
-retroactively. Format channel announcements with the title on the first line
-and the post body on the following lines. For example:
-
-```text
-New player update
-
-Playback controls are now easier to use on mobile.
-```
-
-The bot uses the first line as the title (up to 160 characters), the remaining
-lines as the body, and can mirror an attached JPEG, PNG, GIF, or WebP photo up
-to 5 MiB. Only the verified bot owner can create, edit, or delete
-dashboard-written posts. Blog pages load from the backend during server
-rendering. Channel announcements link back to their Telegram message.
+Dashboard posts support a title, body, and an optional JPEG, PNG, GIF, or WebP
+image up to 5 MiB. Only the verified bot owner can create, edit, or delete
+them. Blog pages load from the backend during server rendering. Mirrored
+channel announcements keep a link to their Telegram message.
 
 ## Configuration
 
-All settings are server-side environment variables. Nothing secret is
-exposed to the browser or the public status page.
+All settings are server side environment variables. Nothing secret is exposed
+to the browser or the public status page.
 
-| Variable | Purpose |
-|---|---|
-| `KITSU_API_URL` | Stable base URL of the FastAPI backend |
-| `KITSU_OWNER_API_TOKEN` | Server-only bearer for backend owner and admin APIs |
-| `KITSU_TELEGRAM_BOT_USERNAME` | Telegram bot username linked to the site domain |
-| `NEXT_PUBLIC_SITE_URL` | Public canonical origin of the dashboard deployment |
-| `DASHBOARD_SESSION_SECRET` | 32 random bytes, hex-encoded, for signed profile sessions |
-| `DASHBOARD_SESSION_TTL_SECONDS` | Session lifetime, optional (default 12h) |
+- `KITSU_API_URL`: stable base URL of the FastAPI backend.
+- `KITSU_OWNER_API_TOKEN`: bearer for backend owner and admin APIs.
+- `KITSU_TELEGRAM_BOT_USERNAME`: Telegram bot username linked to the site domain.
+- `NEXT_PUBLIC_SITE_URL`: public canonical origin of the deployment.
+- `DASHBOARD_SESSION_SECRET`: 32 random bytes, hex encoded, for signed sessions.
+- `DASHBOARD_SESSION_TTL_SECONDS`: session lifetime, optional, default 12 hours.
 
-Copy `.env.example` to your hosting provider's environment settings. Set the
+Copy `.env.example` to the hosting provider's environment settings. Set the
 stable backend address, bot username, owner API token, and a random session
-secret in the webapp deployment. Link the site domain to the bot in BotFather.
-The owner API token stays server side and must never be committed.
+secret. Link the site domain to the bot in BotFather. The owner API token stays
+on the server and must never be committed.
 
 ## Develop
 
@@ -145,14 +101,15 @@ npm run build
 
 ## Stack
 
-Next.js (App Router) · Tailwind CSS v4 · shadcn/ui + Radix · Motion ·
-Recharts · Solar icons · BFF proxy routes with an allowlisted backend
-surface and short response caching.
+Next.js App Router, Tailwind CSS v4, shadcn/ui with Radix, Motion, Recharts,
+Solar icons, and BFF proxy routes with an allowlisted backend surface and short
+response caching.
 
 ## Notes
 
-- Stream sources and metadata rely on upstream availability. The UI reports
-  unavailable, stale, and unverified states instead of implying guarantees.
-- Watch time shown anywhere is heartbeat-measured playback activity, not
-  proof of watching.
+- Metadata and any future media rely on third-party availability. The UI
+  reports unavailable, stale, and unverified states instead of implying
+  guarantees.
+- Watch time shown anywhere is historical playback activity recorded before
+  playback was removed. It is not proof of watching.
 - Solar icons by 480 Design, CC BY 4.0.

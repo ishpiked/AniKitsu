@@ -1,9 +1,6 @@
 import { computeTransitions, overallState } from "./derive";
 import type {
   AdminOverview,
-  AdminRoom,
-  AdminRoomsResponse,
-  AnimeServerSample,
   AnalyticsBucket,
   AnalyticsResponse,
   HttpCounter,
@@ -14,7 +11,6 @@ import type {
   PrometheusData,
   PublicHistoryPoint,
   PublicStatus,
-  ServersResponse,
 } from "./types";
 
 export const MIN_HISTORY_HOURS = 1;
@@ -85,14 +81,6 @@ export function shapeMonitoringResponse(
 }
 
 function sanitizeHistoryPoint(s: MonitoringSnapshot): PublicHistoryPoint {
-  const servers: PublicHistoryPoint["servers"] = {};
-  for (const [name, sample] of Object.entries(s.servers ?? {})) {
-    servers[name] = {
-      status: sample?.status ?? null,
-      stale: sample?.stale ?? null,
-      latency_ms: sample?.latency_ms ?? null,
-    };
-  }
   return {
     t: s.timestamp,
     api: {
@@ -105,38 +93,6 @@ function sanitizeHistoryPoint(s: MonitoringSnapshot): PublicHistoryPoint {
       latency_ms:
         s.bot?.status === "up" ? (s.bot.latency_ms ?? null) : null,
     },
-    servers,
-    anime_server: s.anime_server
-      ? {
-          status: s.anime_server.status,
-          stale: s.anime_server.stale,
-          latency_ms: s.anime_server.latency_ms,
-        }
-      : null,
-  };
-}
-
-function sanitizeAnimeServer(
-  sample: AnimeServerSample | null | undefined
-): AnimeServerSample | null {
-  if (!sample) return null;
-  return {
-    name: "Dante",
-    status: sample.status ?? null,
-    latency_ms: sample.latency_ms ?? null,
-    stale: sample.stale ?? null,
-    probe_at: sample.probe_at ?? null,
-    providers: Object.fromEntries(
-      Object.entries(sample.providers ?? {}).map(([name, provider]) => [
-        name,
-        {
-          status: provider?.status ?? null,
-          latency_ms: provider?.latency_ms ?? null,
-          stale: provider?.stale ?? null,
-          error: provider?.error ?? null,
-        },
-      ])
-    ),
   };
 }
 
@@ -183,19 +139,6 @@ export function sanitizePublicStatus(json: MonitoringResponse): PublicStatus {
           : null,
       uptime: publicUptime(json.uptime.bot),
     },
-    inventory_status: json.current.server_inventory_status ?? null,
-    probe_at: json.current.server_probe_at ?? null,
-    anime_server: sanitizeAnimeServer(json.current.anime_server),
-    providers: Object.entries(json.current.servers ?? {}).map(([name, s]) => ({
-      name,
-      status: s?.status ?? null,
-      stale: s?.stale ?? null,
-      latency_ms: s?.latency_ms ?? null,
-      error: s?.error ?? null,
-      uptime_percent: json.uptime.servers?.[name]?.uptime_percent ?? null,
-      observed_samples: json.uptime.servers?.[name]?.observed_samples ?? null,
-      coverage_percent: json.uptime.servers?.[name]?.coverage_percent ?? null,
-    })),
     history: shaped.history.map(sanitizeHistoryPoint),
     transitions: computeTransitions(json.history).slice(0, 100),
   };
@@ -206,19 +149,7 @@ export function adminToken(): string {
   return process.env.KITSU_OWNER_API_TOKEN ?? "";
 }
 
-/** Clamp an integer query value into [min, max], else fallback. */
-export function clampInt(
-  raw: unknown,
-  min: number,
-  max: number,
-  fallback: number
-): number {
-  const n =
-    typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : NaN;
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.floor(n)));
-}
-
+/** Validate the analytics bucket query value. */
 export function parseBucket(raw: unknown): AnalyticsBucket | null {
   return raw === "day" || raw === "week" || raw === "month" ? raw : null;
 }
@@ -314,28 +245,6 @@ export async function getAdminAnalytics<TBucket>(
   );
 }
 
-export async function getAdminRooms(
-  limit: number,
-  offset: number
-): Promise<AdminRoomsResponse> {
-  const params = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
-  });
-  const raw = await fetchAdmin<
-    AdminRoomsResponse | AdminRoom[] | { items?: unknown }
-  >(`/api/admin/v1/rooms?${params}`);
-  // Tolerate a bare-array or {items:[...]} envelope as well as {rooms:[...]}.
-  if (Array.isArray(raw)) return { rooms: raw };
-  const rooms = (raw as AdminRoomsResponse).rooms;
-  if (Array.isArray(rooms)) return { ...(raw as object), rooms };
-  const items = (raw as { items?: unknown }).items;
-  if (Array.isArray(items)) {
-    return { ...(raw as object), rooms: items as AdminRoom[] };
-  }
-  return { ...(raw as object), rooms: [] };
-}
-
 export class BackendError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -389,10 +298,6 @@ export async function getMonitoringHistory(
   return fetchJson<MonitoringHistoryResponse>(
     `/api/monitoring/history?hours=${clampHours(hours)}`
   );
-}
-
-export async function getServers(): Promise<ServersResponse> {
-  return fetchJson<ServersResponse>("/api/servers");
 }
 
 interface PrometheusSample {

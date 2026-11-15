@@ -5,8 +5,8 @@ import {
   Activity,
   ArrowRight,
   Bot,
+  Check,
   Clock,
-  Server,
 } from "@/lib/icons";
 import { PanelLoading, StatusTimeline, TimeSeriesChart } from "@/components/charts";
 import { Logo } from "@/components/logo";
@@ -49,13 +49,6 @@ export default function LandingView({
     initialAt: Number.isFinite(generatedMs) ? generatedMs : null,
   });
   const data = status.data;
-  const providers = data?.providers ?? [];
-  const up = providers.filter((provider) => provider.status === "up").length;
-  const down = providers.filter((provider) => provider.status === "down").length;
-  const stale = providers.filter((provider) => provider.stale).length;
-  const unknown = providers.filter((provider) => provider.status == null).length;
-  const animeProviders = Object.values(data?.anime_server?.providers ?? {});
-  const animeUp = animeProviders.filter((provider) => provider.status === "up").length;
 
   return (
     <div className="landing-page min-h-svh">
@@ -64,7 +57,7 @@ export default function LandingView({
           <div className="live-title">
             <div className="live-kicker"><Logo className="size-7" /><span>Kitsu Live</span></div>
             <h1>Service overview</h1>
-            <p>API, bot, and provider health across the live network.</p>
+            <p>API and bot health across the Kitsu network.</p>
           </div>
           <div className="live-toolbar">
             <div className={`live-verdict live-verdict-${data?.verdict.state ?? (status.error ? "unavailable" : "unknown")}`}>
@@ -101,10 +94,10 @@ export default function LandingView({
                 <small>{data.bot.status === "disabled" ? "Not configured, not an outage" : `${formatPercent(data.bot.uptime.coverage_percent)} of the range covered`}</small>
               </article>
               <article className="live-stat">
-                <div className="live-stat-label"><Server className="size-4" aria-hidden /><span>Providers</span></div>
-                <div className="live-stat-number">{providers.length ? `${up}/${providers.length}` : "—"}<small>up</small></div>
-                <dl><div><dt>Down</dt><dd>{down}</dd></div><div><dt>Stale</dt><dd>{stale}</dd></div><div><dt>No data</dt><dd>{unknown}</dd></div></dl>
-                <small>Inventory <StatusBadge status={data.inventory_status} /></small>
+                <div className="live-stat-label"><Check className="size-4" aria-hidden /><span>Coverage</span></div>
+                <div className="live-stat-number">{formatPercent(data.api.uptime.coverage_percent)}<small>API</small></div>
+                <dl><div><dt>Bot</dt><dd>{formatPercent(data.bot.uptime.coverage_percent)}</dd></div><div><dt>Samples</dt><dd>{formatNumber(data.api.uptime.observed_samples)}</dd></div></dl>
+                <small>Uptime percentages are always shown with their coverage.</small>
               </article>
               <article className="live-stat">
                 <div className="live-stat-label"><Clock className="size-4" aria-hidden /><span>Monitoring</span></div>
@@ -125,27 +118,11 @@ export default function LandingView({
                 <div className="live-section-head"><div><span>Response time</span><h2>API latency</h2></div><small>Mean / P95 · UTC</small></div>
                 <TimeSeriesChart points={data.history.map((sample) => ({ t: sample.t, values: { mean: sample.api.latency_ms, p95: sample.api.p95_latency_ms } }))} series={[{ key: "mean", label: "Mean", color: "#f0f0f0" }, { key: "p95", label: "P95", color: "#777777" }]} formatY={(value) => `${Math.round(value)} ms`} height={268} />
               </div>
-
-              <div className="live-provider-panel">
-                <div className="live-section-head"><div><span>Latest inventory</span><h2>Providers</h2></div><small>As of {formatUtc(data.probe_at)}</small></div>
-                <div className="live-provider-list">
-                  {providers.length ? providers.map((provider) => (
-                    <div key={provider.name}><span>{provider.name}</span><strong>{formatMs(provider.latency_ms)}</strong><StatusBadge status={provider.status} stale={provider.stale} /></div>
-                  )) : <p>No provider data in the latest snapshot.</p>}
-                </div>
-                <Link className="live-text-link" href="/status">Open full status <ArrowRight className="size-4" aria-hidden /></Link>
-              </div>
             </section>
 
             <section className="live-timeline-grid">
               <div><div className="live-section-head"><div><span>{data.history_hours} hour history</span><h2>API availability</h2></div><small>Sampled every {data.sample_interval_seconds}s</small></div><StatusTimeline points={data.history.map((sample) => ({ t: sample.t, status: toTimelineStatus(sample.api.status) }))} /></div>
               <div><div className="live-section-head"><div><span>{data.history_hours} hour history</span><h2>Telegram bot</h2></div><small>{formatPercent(data.bot.uptime.coverage_percent)} coverage</small></div><StatusTimeline points={data.history.map((sample) => ({ t: sample.t, status: toTimelineStatus(sample.bot.status) }))} /></div>
-            </section>
-
-            <section className="live-dante">
-              <div className="live-dante-title"><div><span>Playback service</span><h2>Dante</h2></div><StatusBadge status={data.anime_server?.status} stale={data.anime_server?.stale} /></div>
-              <div className="live-dante-summary"><strong>{formatMs(data.anime_server?.latency_ms)}</strong><span>reference probe</span><span>{animeProviders.length ? `${animeUp}/${animeProviders.length} sources up` : "No source data"}</span></div>
-              <div className="live-source-list">{animeProviders.length ? Object.entries(data.anime_server?.providers ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([name, provider]) => <div key={name}><span>{name}</span><StatusBadge status={provider.status} stale={provider.stale} /><strong>{formatMs(provider.latency_ms)}</strong></div>) : <p>No anime playback probe has completed yet.</p>}</div>
             </section>
 
             {data.transitions.length > 0 ? (
